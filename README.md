@@ -1,83 +1,100 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/Windows-CMD%20%7C%20PowerShell-blue?style=flat-square&logo=windows&logoColor=white" />
+  <img src="https://img.shields.io/badge/Type-Agent%20Skills-blue?style=flat-square" />
   <img src="https://img.shields.io/badge/Language-ZH%20%7C%20EN-green?style=flat-square" />
   <img src="https://img.shields.io/github/license/High-cla/cmd-powershell-pitfalls?style=flat-square" />
 </p>
 
-<h1 align="center">CMD + PowerShell 混合脚本避坑指南</h1>
-<p align="center"><i>Everything that can go wrong, will go wrong — when you mix CMD and PowerShell.</i></p>
+<h1 align="center">AI Agent Skills</h1>
+<p align="center"><i>Curated skill collection for AI agents — reusable knowledge, proven workflows.</i></p>
 
 ---
 
-> **中文**：编写 Windows 批处理（`.cmd` / `.bat`）并内嵌 PowerShell 命令时，常见的陷阱与解决方案。  
-> **English**: A reference guide for common pitfalls when writing hybrid CMD (`.cmd` / `.bat`) scripts with embedded PowerShell commands.
+> **中文**: AI 智能体技能合集仓库。每个技能是一个独立的 `SKILL.md`，封装特定领域的专家知识和最佳实践。
+>
+> **English**: A collection of reusable AI agent skills. Each skill is a self-contained `SKILL.md` with domain-specific knowledge and proven workflows.
 
 ---
 
-## 📋 内容一览 | Overview
+## 📦 Skills
 
-| #  | 类别 Category            | 问题 Pitfall                                            | 严重性 Severity |
-| -- | ------------------------ | ------------------------------------------------------- | --------------- |
-| 1  | 🔤 编码 Encoding         | `chcp 65001` 破坏 `%VAR%` 展开                            | 🔴 High         |
-| 2  | 🔄 循环 Loops            | `for` 循环体内 `)` 被当作结束符吞掉                       | 🔴 High         |
-| 3  | 📦 重定向 Redirection    | 括号 `()` 与输出重定向 `>` 的优先级问题                    | 🟡 Medium       |
-| 4  | 📁 路径 Paths            | `%~dp0` 的正确使用与拼接方式                              | 🟢 Low          |
-| 5  | ➖ 续行 Line Continuation | `^` 在双引号内不起作用                                    | 🟡 Medium       |
-| 6  | ❝ 引号 Quoting          | `\"` 在 CMD 字符串中无效，应用单引号                       | 🔴 High         |
-| 7  | 🧩 对象类型 Object Type  | `Get-Location` 返回 `PathInfo` 而非字符串                  | 🔴 High         |
-| 8  | 💲 变量传递 Variable     | `$` / `%` 在 CMD → PowerShell 的传递规则                  | 🟡 Medium       |
-| 9  | 🔍 过滤 Filtering        | `findstr` 正则语法有限                                    | 🟢 Low          |
-| 10 | 🔗 管道 Pipeline         | `\|` 在 CMD 字符串中不会触发管道解析                      | 🟢 Low          |
-| 11 | ⏳ 延迟展开 Delayed Exp. | 循环内改变量必须用 `!var!`                                | 🔴 High         |
-| 12 | 📝 文件编码 File Encoding | `Set-Content` 在各 PowerShell 版本的默认编码差异          | 🟡 Medium       |
-| 13 | ❌ 错误处理 Error        | `%ERRORLEVEL%` 与 `$LASTEXITCODE` 的正确使用              | 🟡 Medium       |
-| 14 | ⚡ 性能 Performance      | `.NET` 直调 vs Cmdlet 的性能差距                           | 🟢 Low          |
-| 15 | 🚪 退出码 Exit Code      | PowerShell 退出码需显式传递回 CMD                          | 🟡 Medium       |
-| 16 | 📄 追加 vs 重定向        | 循环内 `>>` 逐个打开文件 vs 一次性 `>`                     | 🟢 Low          |
-| 17 | ✅ 检查清单 Checklist    | 写完脚本后逐项自查                                        | —               |
+| Skill | Description |
+|-------|-------------|
+| [`cmd-powershell-pitfalls`](./skills/cmd-powershell-pitfalls/SKILL.md) | CMD + PowerShell 混合脚本避坑指南 — 35 条规则与代码示例，涵盖编码、引号逃逸、延迟展开、管道编码、权限提权等场景。Use when writing or debugging `.cmd`/`.bat` scripts with embedded PowerShell. |
+| [`cli-first-decision`](./skills/cli-first-decision/SKILL.md) | CLI-First 决策矩阵 — 每次 `task()` 前判断是否可用 CLI 工具更快解决。包含 git-sed, fd-find, rg-search, ast-grep, jq-query 等工具速查表。Use before any agent dispatch to check CLI alternatives. |
 
 ---
 
-## 🎯 适用场景 | When to Use This Guide
+## 🚀 快速入口 | Quick Entry
 
-- 你正在编写 `.cmd` / `.bat` 批处理文件，需要内嵌 `powershell -Command "..."` 
-- 你的脚本在同事电脑上跑不通，或者同样的代码有时行有时不行
-- 你遇到了 `)` 不见了、变量展开乱码、`Get-Location` 报错等奇怪问题
+### cmd-powershell-pitfalls
+
+编写 Windows 批处理（`.cmd` / `.bat`）并内嵌 PowerShell 命令时，常见的陷阱与解决方案。
+
+**17 条核心规则预览**:
+
+| # | 类别 | 问题 | 严重性 |
+|---|------|------|--------|
+| 1 | 🔤 编码 | `chcp 65001` 破坏 `%VAR%` 展开 | 🔴 High |
+| 2 | 🔄 循环 | `for` 循环体内 `)` 被当作结束符吞掉 | 🔴 High |
+| 3 | ❝ 引号 | `\"` 在 CMD 字符串中无效 | 🔴 High |
+| 4 | 🧩 对象类型 | `Get-Location` 返回 `PathInfo` 而非字符串 | 🔴 High |
+| 5 | ⏳ 延迟展开 | 循环内改变量必须用 `!var!` | 🔴 High |
+| 6 | 📦 重定向 | 括号 `()` 与输出重定向 `>` 的优先级问题 | 🟡 Medium |
+| 7 | ➖ 续行 | `^` 在双引号内不起作用 | 🟡 Medium |
+| 8 | 💲 变量传递 | `$` / `%` 在 CMD → PowerShell 的传递规则 | 🟡 Medium |
+| 9 | 📝 文件编码 | `Set-Content` 在各 PowerShell 版本的默认编码差异 | 🟡 Medium |
+| 10 | ❌ 错误处理 | `%ERRORLEVEL%` 与 `$LASTEXITCODE` 的正确使用 | 🟡 Medium |
+| 11 | 🚪 退出码 | PowerShell 退出码需显式传递回 CMD | 🟡 Medium |
+| 12 | 📁 路径 | `%~dp0` 的正确使用与拼接方式 | 🟢 Low |
+| 13 | 🔍 过滤 | `findstr` 正则语法有限 | 🟢 Low |
+| 14 | 🔗 管道 | `\|` 在 CMD 字符串中不会触发管道解析 | 🟢 Low |
+| 15 | ⚡ 性能 | `.NET` 直调 vs Cmdlet 的性能差距 | 🟢 Low |
+| 16 | 📄 追加 vs 重定向 | 循环内 `>>` 逐个打开文件 vs 一次性 `>` | 🟢 Low |
+| 17 | ✅ 检查清单 | 写完脚本后逐项自查 | — |
+
+➡️ 完整内容: [`skills/cmd-powershell-pitfalls/SKILL.md`](./skills/cmd-powershell-pitfalls/SKILL.md)
+
+### cli-first-decision
+
+**核心规则**: 每次 `task()` 前，先问有没有现成的 CLI 工具能更快解决。
+
+| 场景 | 首选工具 | 耗时 |
+|------|---------|------|
+| 批量文本替换 | `git-sed` | <1s |
+| 文件查找 | `fd-find` | <1s |
+| 内容搜索 | `rg-search` | <1s |
+| AST 搜索替换 | `ast-grep` | <1s |
+| JSON 查询 | `jq-query` | <1s |
+| HTTP API 测试 | `git-curl` | <1s |
+| 模糊过滤 | `fzf-filter` | <1s |
+| 打包解压 | `git-tar` | <1s |
+| 换行符转换 | `git-dos2unix` | <1s |
+| ✅ 语义/决策 | 派代理 | 数十秒+ |
+
+➡️ 完整内容: [`skills/cli-first-decision/SKILL.md`](./skills/cli-first-decision/SKILL.md)
 
 ---
 
-## 🚀 快速示例 | Quick Example
+## 🏗 目录结构 | Directory Structure
 
-```batch
-@echo off
-cd /d "%~dp0"
-
-REM ✅ 用 .NET 提升性能
-powershell -NoProfile -Command ^
-  "$f='Steamtools.lua';" ^
-  "$h=[IO.File]::ReadAllText($f);" ^
-  "$r='(Steamtools\.lua|addappid\([^)]+\))';" ^
-  "$m=[regex]::Matches($h,$r);" ^
-  "if($m.Count) { [IO.File]::WriteAllText($f,$m.Value -join \"`r`n\",[Text.Encoding]::ASCII) }"
 ```
-
-> 更多示例见 [`SKILL.md`](./SKILL.md)。
-
----
-
-## 📖 完整文档 | Full Reference
-
-完整 17 条规则及代码示例请阅读：
-
-➡️ **[`SKILL.md`](./SKILL.md)**
+.
+├── .gitignore
+├── README.md                          # 本文件
+└── skills/
+    ├── cmd-powershell-pitfalls/
+    │   └── SKILL.md                   # CMD + PowerShell 混合脚本避坑指南
+    └── cli-first-decision/
+        └── SKILL.md                   # CLI-First 决策矩阵
+```
 
 ---
 
 ## 🤝 贡献 | Contributing
 
-发现新的坑？欢迎提 Issue 或 PR！
+有新技能想加入合集？欢迎提 Issue 或 PR！
 
-Found a new pitfall? Feel free to open an Issue or PR.
+Want to add a new skill? Feel free to open an Issue or PR.
 
 ---
 
