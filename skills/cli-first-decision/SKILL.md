@@ -1,22 +1,22 @@
 ---
 name: cli-first-decision
-description: Use before any tool call or task() dispatch to decide the right approach — built-in tool, CLI tool, skill, MCP, or sub-agent. Triggers include: any operation where you need to pick between direct tools, CLI utilities, skills, MCP servers, or delegating to a sub-agent. Use whenever the approach is not immediately obvious.
+description: ALWAYS use BEFORE thinking, BEFORE any tool call, and BEFORE dispatching sub-agents. This is the FIRST skill to trigger for ANY task involving file operations, code changes, system commands, or when deciding between approaches (built-in tools, CLI utilities, skills, MCP servers, or sub-agents). Trigger on: any request that might need tools, any Windows/Linux command operations, any batch/PowerShell/shell scripting, any file search/replace/edit operations, or whenever you're about to think about how to accomplish something.
 ---
 
 # CLI-First Decision
 
 ## Core Rule
 
-**需要工具调用时，按优先级决策：触发 → 推理 → 内置工具 → CLI 工具 → 技能 → MCP → 子智能体 → 自行推理**
+**任何任务开始前，按优先级决策：先触发 → 再思考 → 选工具 → 执行**
 
-1. **触发**: 接收任务请求，识别类型（修复/实现/调研/评估/开放式），明确用户意图。
-2. **推理优先**: 先思考问题本质——明确需求、拆解步骤、判断范围。不要急着摸工具。
-2. **内置工具次之**: 简单读/写/搜索一步直达 → 直接用 Read/Edit/Grep/Glob 等（零额外成本）
-3. **CLI 工具再次**: 批量/机械性操作 → 用对应的 CLI 工具（<1s，参考下方矩阵）
-4. **技能辅助**: 需要领域专知的操作 → 先加载对应 skill 获取指导（参考可用技能列表）
-5. **MCP 工具**: 知识图谱查询、顺序推理、网页抓取等 → 用 MCP server 提供的工具
-6. **子智能体**: 需要多步推理、语义理解、跨模块分析 → 派子智能体（sub-agent）
-7. **自行推理兜底**: 架构决策、设计权衡、审查验证 → 亲自推理或咨询 Oracle
+1. **强制触发**: 收到 ANY 请求后，在开始思考之前、调用任何工具之前、派发子智能体之前，必须先触发此技能进行决策
+2. **思考优先**: 先理解问题本质——明确需求、拆解步骤、判断范围。不要急着摸工具。
+3. **内置工具次之**: 简单读/写/搜索一步直达 → 直接用 Read/Edit/Grep/Glob 等（零额外成本）
+4. **CLI 工具再次**: 批量/机械性操作 → 用对应的 CLI 工具（<1s，参考下方矩阵）
+5. **技能辅助**: 需要领域专知的操作 → 先加载对应 skill 获取指导（参考可用技能列表）
+6. **MCP 工具**: 知识图谱查询、顺序推理、网页抓取等 → 用 MCP server 提供的工具
+7. **子智能体**: 需要多步推理、语义理解、跨模块分析 → 派子智能体（sub-agent）
+8. **自行推理兜底**: 架构决策、设计权衡、审查验证 → 亲自推理或咨询 Oracle
 
 ## Decision Tree
 

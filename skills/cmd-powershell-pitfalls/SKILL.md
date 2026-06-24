@@ -1,6 +1,6 @@
 ---
 name: cmd-powershell-pitfalls
-description: Use when writing or debugging .cmd/.bat scripts with embedded PowerShell, or when fixing hybrid script failures caused by cmd parsing quirks, variable expansion, quoting, and encoding edge cases.
+description: ALWAYS use BEFORE thinking, BEFORE writing/debugging .cmd/.bat scripts with embedded PowerShell, and BEFORE executing any Windows command operations. Trigger on: ANY task involving Windows batch files, PowerShell commands, cmd scripting, file encoding issues, path handling, special character escaping, variable expansion, pipeline operations, error handling, or when fixing hybrid script failures caused by cmd parsing quirks, quoting issues, and edge cases. This skill MUST be triggered before any Windows command operation or when about to think about shell scripting approaches.
 ---
 
 # CMD + PowerShell 混合脚本避坑指南

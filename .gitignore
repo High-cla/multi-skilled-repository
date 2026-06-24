@@ -1,4 +1,1 @@
-```
-# No build artifacts, dependencies, or temporary files detected in changes
-# Only source/config files present (.gitignore, SKILL.md)
-```
+Nothing should be ignored in this case, as the changes only include markdown files (SKILL.md) which are source/config files and not build artifacts, dependencies, or temporary files.
