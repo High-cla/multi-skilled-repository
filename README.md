@@ -21,6 +21,7 @@
 |-------|-------------|
 | [`cmd-powershell-pitfalls`](./skills/cmd-powershell-pitfalls/SKILL.md) | CMD + PowerShell 混合脚本避坑指南 — 35 条规则与代码示例，涵盖编码、引号逃逸、延迟展开、管道编码、权限提权等场景。Use when writing or debugging `.cmd`/`.bat` scripts with embedded PowerShell. |
 | [`cli-first-decision`](./skills/cli-first-decision/SKILL.md) | CLI-First 决策矩阵 — 每次 `task()` 前判断是否可用 CLI 工具更快解决。包含 git-sed, fd-find, rg-search, ast-grep, jq-query 等工具速查表。Use before any agent dispatch to check CLI alternatives. |
+| [`customize-dsh`](./skills/customize-dsh/SKILL.md) | DeepSeek Harness (DSH) 自定义修改指南 — settings.yaml、profiles/*/cordis.patch.yml 与 bundles、技能创作与修复、agent preset、MCP server (dsh-mcp-client)、cordis 插件、自定义工具、slash 命令、启动失败与 patch 报错诊断。Use when editing or creating DSH configs/extensions. |
 
 ---
 
@@ -73,6 +74,22 @@
 
 ➡️ 完整内容: [`skills/cli-first-decision/SKILL.md`](./skills/cli-first-decision/SKILL.md)
 
+### customize-dsh
+
+编辑或创建 DeepSeek Harness (DSH) 自身配置与扩展时的权威参考：
+
+| 定制面 | 关键文件/机制 |
+|--------|--------------|
+| 配置 | `settings.yaml`（默认模型/权限预设/主题） |
+| Profile/Patch | `profiles/*/cordis.patch.yml`、`package.json` (`dsh.profile.bundles`) |
+| 技能 | `~/.dsh/skills`、`~/.agents/skills`、项目 `.dsh/skills`（6 层 rank） |
+| MCP | `@deepseek-ai/dsh-mcp-client`（stdio / streamable-http） |
+| 插件/工具/命令 | cordis 插件包、defineTool、`ctx.commands.register` |
+
+涵盖配置生效时机（HMR/热重载）、Profiles 层叠与 patch 语义（insert/disable/整体替换）、反直觉陷阱（空/仅注释 patch 文件 throws 须用 `[]`）、逃生舱（`dev_fix_patch`/`dev_heal_links`/`dev_clear_routes`/`dev_uninject_plugin`）等。附带 `evals/evals.json`（6 个评估用例）。
+
+➡️ 完整内容: [`skills/customize-dsh/SKILL.md`](./skills/customize-dsh/SKILL.md)
+
 ---
 
 ## 🏗 目录结构 | Directory Structure
@@ -84,8 +101,11 @@
 └── skills/
     ├── cmd-powershell-pitfalls/
     │   └── SKILL.md                   # CMD + PowerShell 混合脚本避坑指南
-    └── cli-first-decision/
-        └── SKILL.md                   # CLI-First 决策矩阵
+    ├── cli-first-decision/
+    │   └── SKILL.md                   # CLI-First 决策矩阵
+    └── customize-dsh/
+        ├── SKILL.md                   # DSH 自定义修改指南
+        └── evals/evals.json           # 评估用例
 ```
 
 ---

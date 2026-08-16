@@ -1,0 +1,57 @@
+{
+  "skill_name": "customize-dsh",
+  "evals": [
+    {
+      "id": 1,
+      "name": "add-local-mcp-server",
+      "prompt": "在 DSH profile 的 cordis.patch.yml 中加入本地 MCP server（C:/tools/my-mcp.exe，serverName=mymcp，toolCallTimeoutMs=300000）",
+      "notes": "iteration-1；baseline 提示词含背景泄露，已废弃该组",
+      "assertions": []
+    },
+    {
+      "id": 2,
+      "name": "create-user-skill",
+      "prompt": "创建 release-note-writer 技能装到用户级技能目录，并说明生效时机",
+      "notes": "iteration-1；baseline 提示词含背景泄露，已废弃该组",
+      "assertions": []
+    },
+    {
+      "id": 3,
+      "name": "change-default-model",
+      "prompt": "把 DSH 默认模型从 deepseek-v4-flash 换成 hy3（provider 不变），其他不动",
+      "notes": "iteration-1；baseline 提示词含背景泄露，已废弃该组",
+      "assertions": []
+    },
+    {
+      "id": 4,
+      "name": "patch-empty-file-crash",
+      "prompt": "DSH 启动失败，cordis.patch.yml 只有注释（解析失败）。修复并解释原因。",
+      "assertions": [
+        "cordis.patch.yml 修复为合法 YAML 数组（[] 或有效条目）",
+        "最终回复解释空/仅注释文件会被解析为 nothing 而抛错",
+        "cordis.yml/package.json 未改动"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "config-replace-preserve",
+      "prompt": "把 mcp-fastctx 条目的 toolCallTimeoutMs 从 300000 改为 60000，其他配置不动。",
+      "assertions": [
+        "toolCallTimeoutMs 为 60000",
+        "serverName/command/transport 等原字段未被整体替换丢掉",
+        "id 条目数保持 1",
+        "最终回复说明改动方法（整体替换需重述字段）"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "skill-not-discovered",
+      "prompt": "技能 release-notes 放在嵌套目录且 frontmatter 缺 description，会话看不到，诊断并修复。",
+      "assertions": [
+        "技能移到直接条目位置 <skills-home>/release-notes/SKILL.md",
+        "frontmatter 补上非空 description",
+        "最终回复同时提到嵌套目录不支持与缺 description 被过滤"
+      ]
+    }
+  ]
+}
