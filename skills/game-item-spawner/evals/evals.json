@@ -1,0 +1,23 @@
+{
+  "skill_name": "game-item-spawner",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我在做一个 Unity 游戏 Probably Stolen 的模组，想加一个'网页点击生成物品'功能。游戏 DLL 在我 D:\\steam\\steamapps\\common\\Probably Stolen Playtest\\BepInEx\\plugins\\xmod\\ProbablyStolenPlaytest.dll（IL2CPP，已用 ilspycmd 反编译到 C:\\tmp\\xmod_il\\decomp）。物品目录应该在内嵌资源里。请帮我：1) 找到生成物品的 API 和主背包入口；2) 提取物品目录 JSON（stableId/中文名/分类）；3) 写一个模组用的 HTTP 服务器代码；4) 写一个网页浏览器（分类+搜索+点击生成）。",
+      "expected_output": "输出：生成API调用模式（DirectoryMaster.Item/mayHaveValidInventorySlot/uncheckedAccept）、item-catalog.json 提取结果（397 items）、spawn_server.cs（HttpListener+队列+主线程消费）、items_browser.html（分类侧栏+搜索+生成按钮）。",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "帮我写一个通用的'游戏物品生成器'网页端 mock 验证脚本，用来在游戏没运行的时候验证网页点击生成功能。要能模拟 /api/health 和 /api/spawn?itemId=X&count=N 两个接口，返回 JSON，带 CORS 头。端口用 26880。",
+      "expected_output": "mock_spawn_server.py（argparse 端口参数、HealthHandler/spawnHandler、CORS 头、JSON 响应），运行后 curl 测试 /api/health 返回 {\"ok\":true}。",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "我在逆向一个游戏 DLL 找物品表，物品目录似乎是内嵌资源 JSON（以 records 键开头，397 条记录），但直接用 json.loads 失败（位置2出现 0xff 编码错误）。DLL 很大（595K），帮我写个脚本从二进制里提取这段 JSON。",
+      "expected_output": "extract_catalog.py：二进制扫描引号'dummy_records' 键→平衡括号提取→多编码尝试（utf-8/utf-16/gbk）→输出 JSON。运行后得到 269797 字节/397 records，中文正常。",
+      "files": []
+    }
+  ]
+}

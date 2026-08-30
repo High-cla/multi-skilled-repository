@@ -22,6 +22,7 @@
 | [`cmd-powershell-pitfalls`](./skills/cmd-powershell-pitfalls/SKILL.md) | CMD + PowerShell 混合脚本避坑指南 — 35 条规则与代码示例，涵盖编码、引号逃逸、延迟展开、管道编码、权限提权等场景。Use when writing or debugging `.cmd`/`.bat` scripts with embedded PowerShell. |
 | [`cli-first-decision`](./skills/cli-first-decision/SKILL.md) | CLI-First 决策矩阵 — 每次 `task()` 前判断是否可用 CLI 工具更快解决。包含 git-sed, fd-find, rg-search, ast-grep, jq-query 等工具速查表。Use before any agent dispatch to check CLI alternatives. |
 | [`customize-dsh`](./skills/customize-dsh/SKILL.md) | DeepSeek Harness (DSH) 自定义修改指南 — settings.yaml、profiles/*/cordis.patch.yml 与 bundles、技能创作与修复、agent preset、MCP server (dsh-mcp-client)、cordis 插件、自定义工具、slash 命令、启动失败与 patch 报错诊断。Use when editing or creating DSH configs/extensions. |
+| [`game-item-spawner`](./skills/game-item-spawner/SKILL.md) | 游戏模组"网页点击生成物品"系统 — 逆向找生成API、提取物品目录(内嵌JSON)、模组内嵌本地HTTP服务器(localhost:PORT)、网页物品浏览器(分类/搜索/点击生成)、GitHub Pages托管+全链路验证。Use when user wants in-game item spawning with a visual web UI (spawn item, item browser, cheat generator). |
 
 ---
 
@@ -90,6 +91,24 @@
 
 ➡️ 完整内容: [`skills/customize-dsh/SKILL.md`](./skills/customize-dsh/SKILL.md)
 
+### game-item-spawner
+
+为游戏模组搭建"网页点击生成物品"系统——网页物品浏览器点"生成"→ 物品进游戏背包。
+
+**核心架构**: 网页只用 HTTP，与游戏解耦；模组是本机服务。
+
+| 环节 | 说明 |
+|------|------|
+| 逆向 | 找游戏生成API（`DirectoryMaster.Item` 类）+ 主背包入口 |
+| 提取 | 内嵌资源 JSON → `items_data.js`（ID/名称/分类） |
+| 服务器 | 模组内嵌 HttpListener (localhost:26880)，**HTTP线程只入队、主线程OnUpdate消费**（IL2CPP防跨线程崩） |
+| 网页 | 分类侧栏+搜索+卡片+生成按钮+状态点+Toast，可托管 GitHub Pages |
+| 验证 | mock 服务器模拟 /api/health+/api/spawn，无游戏也能全链路测 |
+
+**换游戏复用**: 骨架 100% 通用，仅改 3 处（创建API/主背包/入包API）。附带 `evals/evals.json`（3 个评估用例）。
+
+➡️ 完整内容: [`skills/game-item-spawner/SKILL.md`](./skills/game-item-spawner/SKILL.md)
+
 ---
 
 ## 🏗 目录结构 | Directory Structure
@@ -103,8 +122,13 @@
     │   └── SKILL.md                   # CMD + PowerShell 混合脚本避坑指南
     ├── cli-first-decision/
     │   └── SKILL.md                   # CLI-First 决策矩阵
-    └── customize-dsh/
-        ├── SKILL.md                   # DSH 自定义修改指南
+    ├── customize-dsh/
+    │   ├── SKILL.md                   # DSH 自定义修改指南
+    │   └── evals/evals.json           # 评估用例
+    └── game-item-spawner/
+        ├── SKILL.md                   # 游戏模组"网页点击生成物品"系统
+        ├── scripts/                   # spawn_server.cs / mock_spawn_server.py / extract_catalog.py
+        ├── assets/                    # items_browser.html / items_data.example.js
         └── evals/evals.json           # 评估用例
 ```
 
