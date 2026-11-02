@@ -3,6 +3,8 @@
 """HTTP-level tests for the mock spawn queue and origin policy."""
 import http.client
 import json
+import queue
+from collections import OrderedDict
 import sys
 import threading
 import time
@@ -96,6 +98,17 @@ class MockServerHttpTests(unittest.TestCase):
         status, _, body = self.request("/api/spawn?itemId=x&count=999")
         self.assertEqual(status, 400)
         self.assertEqual(body["state"], "rejected")
+
+    def test_full_queue_is_rejected_with_429(self):
+        runtime = MockRuntime.__new__(MockRuntime)
+        runtime.pending = queue.Queue(maxsize=1)
+        runtime.statuses = OrderedDict()
+        runtime.lock = threading.Lock()
+        runtime.pending.put_nowait(object())
+        request, status = runtime.enqueue("overflow.item", 1)
+        self.assertEqual(status, 429)
+        self.assertEqual(request["state"], "rejected")
+        self.assertEqual(request["err"], "mock queue is full")
 
 
 if __name__ == "__main__":
