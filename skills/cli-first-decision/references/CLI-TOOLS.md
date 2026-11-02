@@ -137,7 +137,7 @@ just --list
 ```bash
 for tool in sg rg fd sd jq yq curl zstd duckdb difft delta just fzf bat tokei mcp2cli; do
   if command -v "$tool" >/dev/null 2>&1; then
-    printf '%-12s %s\\n' "$tool" "$(command -v "$tool")"
+    printf '%-12s %s\n' "$tool" "$(command -v "$tool")"
     "$tool" --version 2>/dev/null | head -n 1 || true
   fi
 done
