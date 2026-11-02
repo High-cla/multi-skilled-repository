@@ -100,6 +100,26 @@
         "serverName pattern 为 [A-Za-z0-9_-]{1,32}",
         "唯一性按注册 scope 管理，独立 Agent scopes 可以复用 namespace"
       ]
+    },
+    {
+      "id": 11,
+      "name": "legacy-agent-preset-directory",
+      "prompt": "旧 preset 在 $DSH_HOME/.agent-presets/<id>/preset.yml 和 agent.cordis.yml 里，为什么修改后不生效？",
+      "assertions": [
+        "说明旧式目录格式已不再被当前上游读取",
+        "区分当前 @deepseek-ai/dsh-agent-preset Cordis entry 与旧目录格式",
+        "给出按当前 profile composition/管理界面迁移的方向"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "agent-preset-identity",
+      "prompt": "我在 Cordis patch 中编辑一个 Agent preset，entry id 和 config.id 有什么区别？",
+      "assertions": [
+        "entry id 是 Loader patch 定位键",
+        "config.id 是 session 使用的 preset identity",
+        "config.plugins 是 Agent 子插件 entry list，整份替换时需要保留完整内容"
+      ]
     }
   ]
 }
