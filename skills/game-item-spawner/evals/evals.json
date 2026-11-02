@@ -4,20 +4,60 @@
     {
       "id": 1,
       "prompt": "我在做一个 Unity 游戏 Probably Stolen 的模组，想加一个'网页点击生成物品'功能。游戏 DLL 在我 D:\\steam\\steamapps\\common\\Probably Stolen Playtest\\BepInEx\\plugins\\xmod\\ProbablyStolenPlaytest.dll（IL2CPP，已用 ilspycmd 反编译到 C:\\tmp\\xmod_il\\decomp）。物品目录应该在内嵌资源里。请帮我：1) 找到生成物品的 API 和主背包入口；2) 提取物品目录 JSON（stableId/中文名/分类）；3) 写一个模组用的 HTTP 服务器代码；4) 写一个网页浏览器（分类+搜索+点击生成）。",
-      "expected_output": "输出：生成API调用模式（DirectoryMaster.Item/mayHaveValidInventorySlot/uncheckedAccept）、item-catalog.json 提取结果（397 items）、spawn_server.cs（HttpListener+队列+主线程消费）、items_browser.html（分类侧栏+搜索+生成按钮）。",
+      "expected_output": "输出：提取 JSON 并通过 json_to_js.py 生成 assets/items_data.js；服务器使用有界队列，OnUpdate 每帧按预算消费；网页使用 DOM API 展示目录；状态经 /api/spawn/status 确认后才显示真实成功；完整生命周期包含 Start/DrainQueue/Stop。",
       "files": []
     },
     {
       "id": 2,
       "prompt": "帮我写一个通用的'游戏物品生成器'网页端 mock 验证脚本，用来在游戏没运行的时候验证网页点击生成功能。要能模拟 /api/health 和 /api/spawn?itemId=X&count=N 两个接口，返回 JSON，带 CORS 头。端口用 26880。",
-      "expected_output": "mock_spawn_server.py（argparse 端口参数、HealthHandler/spawnHandler、CORS 头、JSON 响应），运行后 curl 测试 /api/health 返回 {\"ok\":true}。",
+      "expected_output": "mock_spawn_server.py 返回 202/state=queued/requestId；后台 mock worker 将状态推进到 processing/succeeded；网页标记为 Mock 模拟完成并明确不代表真实游戏 API 或背包已修改。",
       "files": []
     },
     {
       "id": 3,
       "prompt": "我在逆向一个游戏 DLL 找物品表，物品目录似乎是内嵌资源 JSON（以 records 键开头，397 条记录），但直接用 json.loads 失败（位置2出现 0xff 编码错误）。DLL 很大（595K），帮我写个脚本从二进制里提取这段 JSON。",
-      "expected_output": "extract_catalog.py：二进制扫描引号'dummy_records' 键→平衡括号提取→多编码尝试（utf-8/utf-16/gbk）→输出 JSON。运行后得到 269797 字节/397 records，中文正常。",
+      "expected_output": "extract_catalog.py 用字符串感知的 JSON 括号扫描提取完整目录；json_to_js.py 验证 stableId/重复 ID/字段结构并生成 window.ITEMS；支持 UTF-8/UTF-16/GBK 输入。",
       "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "本机 HTTP 服务器收到了很多点击请求。请确保请求队列有上限，队列满载时明确拒绝，并限制 Unity 主线程每帧的生成量。",
+      "assertions": [
+        "待处理队列有明确容量上限并对满载请求返回 429/rejected",
+        "HTTP 线程不调用任何游戏 API，只负责校验、排队和响应",
+        "DrainQueue/Update 每帧最多处理固定数量物品，避免无界 while 清空队列",
+        "队列长度、count 参数和状态历史均有上限"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "网页点击生成后显示已生成，但游戏过一会儿才把物品加入背包。请修正 API 和 UI 状态语义。",
+      "assertions": [
+        "HTTP 接收和入队阶段返回 202/queued，而不是成功生成",
+        "返回 requestId 并提供状态查询接口",
+        "状态覆盖 queued、processing、succeeded、partial/failed/rejected",
+        "网页只有在游戏 API 报告物品已实际入包后才显示真实生成成功"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "物品目录中的名称、分类或描述包含 HTML 标签、引号和事件处理器字符串，网页如何防止注入？",
+      "assertions": [
+        "所有动态目录字段都通过 createElement/textContent/dataset 等 DOM API 写入",
+        "不把来自目录的字段拼接到 innerHTML、outerHTML 或属性字符串",
+        "类别、ID、详情、描述、搜索结果和生成按钮都覆盖安全渲染",
+        "包含恶意 HTML 字段的回归样例不会创建脚本或可执行节点"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "提取目录后网页没有物品数据，且我不确定生成目录是否能公开发布。请补齐生成闭环和来源说明。",
+      "assertions": [
+        "extract_catalog.py 的 JSON 输出可由 json_to_js.py 转为 assets/items_data.js",
+        "网页静态脚本与 items_data.js 的加载路径明确且有缺失/格式错误提示",
+        "生成的游戏专属数据默认不提交仓库，公开发布前需核对 EULA/版权和再分发授权",
+        "仓库根许可证只覆盖仓库提供的代码、文档和模板，不覆盖游戏资产和目录数据"
+      ]
     }
   ]
-}
+}\n

@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Type-Agent%20Skills-blue?style=flat-square" />
   <img src="https://img.shields.io/badge/Language-ZH%20%7C%20EN-green?style=flat-square" />
-  <img src="https://img.shields.io/github/license/High-cla/cmd-powershell-pitfalls?style=flat-square" />
+  <img src="https://img.shields.io/github/license/High-cla/multi-skilled-repository?style=flat-square" />
 </p>
 
 <h1 align="center">AI Agent Skills</h1>
@@ -54,7 +54,7 @@
 | 16 | 📄 追加 vs 重定向 | 循环内 `>>` 逐个打开文件 vs 一次性 `>` | 🟢 Low |
 | 17 | ✅ 检查清单 | 写完脚本后逐项自查 | — |
 
-➡️ 完整内容: [`skills/cmd-powershell-pitfalls/SKILL.md`](./skills/cmd-powershell-pitfalls/SKILL.md)
+➡️ [技能正文](./skills/cmd-powershell-pitfalls/SKILL.md) · [回归评测](./skills/cmd-powershell-pitfalls/evals/evals.json) · [CMD/PowerShell 实机 smoke fixtures](./skills/cmd-powershell-pitfalls/tests/)
 
 ### cli-first-decision
 
@@ -100,11 +100,11 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
 |------|------|
 | 逆向 | 找游戏生成API（`DirectoryMaster.Item` 类）+ 主背包入口 |
 | 提取 | 内嵌资源 JSON → `items_data.js`（ID/名称/分类） |
-| 服务器 | 模组内嵌 HttpListener (localhost:26880)，**HTTP线程只入队、主线程OnUpdate消费**（IL2CPP防跨线程崩） |
-| 网页 | 分类侧栏+搜索+卡片+生成按钮+状态点+Toast，可托管 GitHub Pages |
-| 验证 | mock 服务器模拟 /api/health+/api/spawn，无游戏也能全链路测 |
+| 服务器 | HttpListener (localhost:26880)，待处理队列上限 128、单请求最多 25 件、主线程每帧最多生成 4 件；HTTP 202 仅表示已入队，状态通过 /api/spawn/status 查询；浏览器 Origin 使用精确 allowlist |
+| 网页 | items_data.js 外置加载；目录字段仅通过 DOM API/textContent 渲染；按钮区分入队、处理中、游戏成功与 Mock 模拟完成 |
+| 验证 | mock 明确区分入队与模拟完成；模拟成功不代表真实游戏已入包 |
 
-**换游戏复用**: 骨架 100% 通用，仅改 3 处（创建API/主背包/入包API）。附带 `evals/evals.json`（3 个评估用例）。
+**换游戏复用**: HTTP/队列/网页/验证框架可复用；只需接入游戏创建 API、主背包和入包 API。`TrySpawnOne` 未接入真实游戏 API 时默认失败，不会伪造生成成功。附带 `evals/evals.json`（7 个评估用例）和目录提取/转换、mock HTTP 协议回归测试。
 
 ➡️ 完整内容: [`skills/game-item-spawner/SKILL.md`](./skills/game-item-spawner/SKILL.md)
 
@@ -114,11 +114,20 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
 
 ```
 .
+├── .github/
+│   └── workflows/
+│       └── repository-regression.yml
 ├── .gitignore
+├── LICENSE
 ├── README.md
 └── skills/
     ├── cmd-powershell-pitfalls/
-    │   └── SKILL.md
+    │   ├── SKILL.md
+    │   ├── evals/
+    │   │   └── evals.json
+    │   └── tests/
+    │       ├── cmd-runtime-smoke.cmd
+    │       └── powershell-runtime-smoke.ps1
     ├── cli-first-decision/
     │   ├── SKILL.md
     │   ├── references/
@@ -132,12 +141,25 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
     │       └── evals.json
     ├── customize-dsh/
     │   ├── SKILL.md
-    │   └── evals/evals.json
+    │   ├── references/
+    │   │   └── AUTHORITATIVE-SOURCES.md
+    │   └── evals/
+    │       └── evals.json
     └── game-item-spawner/
         ├── SKILL.md
+        ├── DATA-SOURCES.md
         ├── scripts/
+        │   ├── extract_catalog.py
+        │   ├── json_to_js.py
+        │   ├── spawn_server.cs
+        │   └── mock_spawn_server.py
         ├── assets/
-        └── evals/evals.json
+        │   └── items_browser.html
+        ├── tests/
+        │   ├── test_catalog_pipeline.py
+        │   └── test_mock_server.py
+        └── evals/
+            └── evals.json
 ```
 
 ---
@@ -150,6 +172,8 @@ Want to add a new skill? Feel free to open an issue or PR.
 
 ---
 
-## 📄 许可 | License
+## 📄 许可与数据来源 | License & Data Provenance
+
+仓库中的技能文档、脚本模板和网页模板按根目录 [MIT License](./LICENSE) 发布。游戏本体、DLL、内嵌物品目录、图像、名称与描述等第三方内容不因该许可证而自动获得再分发授权。物品目录默认由使用者从其有权访问的本地游戏资源生成；请记录游戏版本、资源文件、提取日期和授权依据，并在发布前核验游戏 EULA 与相关权利方要求。详见 [game-item-spawner 数据来源声明](./skills/game-item-spawner/DATA-SOURCES.md)。
 
 MIT

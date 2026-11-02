@@ -1,83 +1,118 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""从二进制 DLL（或任意文件）内嵌资源里提取 JSON 目录 (物品目录等).
-原理: 很多游戏把 item-catalog.json 之类内嵌为字节串, 含 UTF-8 中文.
-用 "records" 等标志字符串定位, 平衡括号法提取完整 JSON.
-也可以直接让用户提供导出好的 JSON — 本脚本是兜底.
+"""从 DLL/资源文件中提取内嵌 JSON 目录。
 
 用法:
   python extract_catalog.py <dll_or_file> [marker] [out.json]
-  - marker: 定位标志 (默认 "records"), 建议用 JSON 里唯一的键名
-  - out:   输出 JSON 路径 (默认 <input>.catalog.json)
-然后可转 items_data.js: 见 SKILL.md 步骤2
+
+默认查找 JSON 键 "records"，输出 <input>.catalog.json。
+提取后使用 json_to_js.py 将 JSON 转为网页加载的 items_data.js。
 """
 import json
-import re
 import sys
+from pathlib import Path
+
+
+def _balanced_end(text: str, start: int) -> int:
+    """返回 start 处 JSON 对象/数组的结束位置；字符串中的括号不参与计数。"""
+    if start >= len(text) or text[start] not in "{[":
+        raise ValueError("JSON value must start with '{' or '['")
+    pairs = {"{": "}", "[": "]"}
+    stack = []
+    in_string = False
+    escaped = False
+    for index in range(start, len(text)):
+        char = text[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char in pairs:
+            stack.append(pairs[char])
+        elif char in "}]":
+            if not stack or stack[-1] != char:
+                raise ValueError("mismatched JSON brackets")
+            stack.pop()
+            if not stack:
+                return index + 1
+    raise ValueError("unbalanced JSON brackets")
+
+
+def _decode_candidates(data: bytes):
+    # errors=ignore discards arbitrary non-text bytes around a resource; the
+    # extracted candidate is still required to pass json.loads before use.
+    for encoding in ("utf-8-sig", "utf-16-le", "utf-16-be", "gbk"):
+        try:
+            text = data.decode(encoding, errors="ignore")
+        except (LookupError, UnicodeError):
+            continue
+        yield encoding, text
 
 
 def extract_json(data: bytes, marker: bytes) -> bytes:
-    """找到含 marker 的 JSON 对象, 平衡括号提取."""
-    m = re.search(re.escape(marker), data)
-    if not m:
-        raise ValueError(f"marker {marker!r} not found")
-    # 尝试向后找到真实起点 (允许 marker 前有引号/BOM)
-    start = data.rfind(b"{", 0, m.start())
-    # 如果 rfind 太靠前导致是别的 {, 回退: 从 marker 往回找最近的 { 或带引号键的起点
-    if start < 0:
-        # 从 marker 字符串往回找 (可能前面有 quote)
-        q = data.rfind(b'"', 0, m.start())
-        start = data.rfind(b"{", 0, q) if q > 0 else -1
-    if start < 0:
-        raise ValueError("no '{' before marker")
-    depth = 0
-    for i in range(start, len(data)):
-        c = data[i]
-        if c == 0x7B:  # {
-            depth += 1
-        elif c == 0x7D:  # }
-            depth -= 1
-            if depth == 0:
-                return data[start:i + 1]
-    raise ValueError("unbalanced braces")
+    """定位包含 marker 的完整 JSON 值，并验证其可解析性。"""
+    marker_text = marker.decode("utf-8", errors="strict")
+    failures = []
+    for encoding, text in _decode_candidates(data):
+        cursor = 0
+        while True:
+            position = text.find(marker_text, cursor)
+            if position < 0:
+                break
+            start = text.rfind("{", 0, position)
+            while start >= 0:
+                try:
+                    end = _balanced_end(text, start)
+                    candidate = text[start:end]
+                    if marker_text in candidate:
+                        parsed = json.loads(candidate)
+                        if isinstance(parsed, (dict, list)):
+                            return candidate.encode(encoding.replace("-sig", ""))
+                except (ValueError, UnicodeError, json.JSONDecodeError) as exc:
+                    failures.append(str(exc))
+                start = text.rfind("{", 0, start)
+            cursor = position + len(marker_text)
+    detail = failures[-1] if failures else "marker not found in a decodable text region"
+    raise ValueError("could not locate a valid JSON object containing marker: " + detail)
 
 
-def decode_json(js: bytes):
-    """尝试多种编码解析 JSON."""
+def decode_json(raw: bytes):
     errors = []
-    for enc in ("utf-8", "utf-16", "gbk"):
+    for encoding in ("utf-8-sig", "utf-16", "utf-16-le", "utf-16-be", "gbk"):
         try:
-            return json.loads(js.decode(enc)), enc
-        except (UnicodeDecodeError, ValueError) as e:
-            errors.append(f"{enc}: {e}")
-    raise ValueError("cannot decode JSON: " + "; ".join(errors))
+            return json.loads(raw.decode(encoding)), encoding
+        except (UnicodeDecodeError, ValueError) as exc:
+            errors.append(f"{encoding}: {exc}")
+    raise ValueError("cannot decode extracted JSON: " + "; ".join(errors))
 
 
-def main():
-    if len(sys.argv) < 2:
+def main(argv=None):
+    args = list(sys.argv[1:] if argv is None else argv)
+    if not args:
         print(__doc__)
-        sys.exit(1)
-    src = sys.argv[1]
-    marker = (sys.argv[2] if len(sys.argv) > 2 else '"records"').encode()
-    out = sys.argv[3] if len(sys.argv) > 3 else src + ".catalog.json"
+        return 2
+    source = Path(args[0])
+    marker = (args[1] if len(args) > 1 else '"records"').encode("utf-8")
+    output = Path(args[2]) if len(args) > 2 else Path(str(source) + ".catalog.json")
 
-    data = open(src, "rb").read()
-    js = extract_json(data, marker)
-    obj, enc = decode_json(js)
-    # 猜测记录数单位
-    if isinstance(obj, dict) and "records" in obj:
-        n = len(obj["records"])
-    elif isinstance(obj, dict):
-        n = None
-    else:
-        n = len(obj)
-    open(out, "wb").write(js)
-    print(f"extracted {len(js)} bytes -> {out}  (records: {n})")
-    # 打印首个记录预览
-    recs = obj.get("records", obj) if isinstance(obj, dict) else obj
-    if isinstance(recs, list) and recs:
-        print("sample:", json.dumps(recs[0], ensure_ascii=False)[:200])
+    raw = source.read_bytes()
+    extracted = extract_json(raw, marker)
+    obj, encoding = decode_json(extracted)
+    output.write_bytes(extracted)
+
+    records = obj.get("records", obj) if isinstance(obj, dict) else obj
+    count = len(records) if isinstance(records, (list, dict)) else 0
+    print(f"extracted {len(extracted)} bytes -> {output} (encoding: {encoding}, records: {count})")
+    if isinstance(records, list) and records:
+        print("sample:", json.dumps(records[0], ensure_ascii=False)[:200])
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
