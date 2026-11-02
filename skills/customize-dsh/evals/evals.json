@@ -130,7 +130,10 @@
         "明确 Loader 完成 entry 加载后，文件在首次写入前即重命名为 settings.yaml.imported，随后才逐 section 写入",
         "说明 active composition 拒绝的 section 会记录日志并仅保留在 settings.yaml.imported；重命名不代表全部导入成功，也不会自动重试",
         "普通插件 Config 通过 Cordis patch，volatile 字段通过 Settings 表单/API 编辑",
-        "不得声称所有 settings.yaml 改动会自动热发布"
+        "不得声称所有 settings.yaml 改动会自动热发布",
+        "明确 permission.defaultPreset 在 settings.yaml 中只在该旧文件首次迁移导入时读取；之后编辑文件无效",
+        "指出当前用户修改未来会话默认值应使用 Web GUI 通用设置中的 Permission 默认项",
+        "指出部署者应修改 profile cordis.patch.yml 的 id: permission / @deepseek-ai/dsh-permission-presets config，而不是持续编辑 settings.yaml"
       ]
     },
     {
@@ -155,6 +158,19 @@
         "建议备份并检查启动日志、settings.yaml.imported 和当前 profile 配置",
         "按当前 entry id 与安装版本 Config schema 逐项映射；普通 Config 走 Cordis patch，volatile 字段走 Settings API/UI",
         "不要将整个 settings.yaml.imported 盲目覆盖现有配置，也不要默认改回 settings.yaml 重启"
+      ]
+    },
+    {
+      "id": 16,
+      "name": "permission-default-current-configuration-path",
+      "prompt": "我已经有 settings.yaml.imported，想把以后新建 DSH 会话的默认权限改为 read-only。继续编辑 settings.yaml 的 permission.defaultPreset 可以吗？当前应该从哪里修改？",
+      "assertions": [
+        "明确 settings.yaml 是一次性 legacy import 来源；重命名后再编辑它不会更新活动默认权限，也不会重新导入",
+        "普通 Web 用户通过「通用设置」中的 Permission 默认项修改未来新会话默认值",
+        "说明该 UI 使用 permission Settings namespace 的 defaultPreset，并写入当前 profile",
+        "部署者可在当前 profile cordis.patch.yml 的 id: permission / name: @deepseek-ai/dsh-permission-presets entry 中配置 config.defaultPreset 与 config.presets",
+        "defaultPreset 必须是 presets 表中已配置的 key；id-targeted patch 替换整个 config，修改时要保留现有 presets",
+        "默认值变更只影响之后新建的会话；已存在或恢复的会话保留其有效权限"
       ]
     }
   ]

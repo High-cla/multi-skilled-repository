@@ -1,6 +1,6 @@
 ---
 name: customize-dsh
-description: 仅当用户要编辑或创建 DeepSeek Harness（DSH）自身配置或扩展时使用：settings.yaml（默认模型/权限预设/主题）、profiles/*/cordis.patch.yml 与 package.json（dsh.profile.bundles）、技能创作与修复（~/.dsh/skills、~/.agents/skills、项目 .dsh/skills，含技能不生效/嵌套目录问题）、Agent preset（@deepseek-ai/dsh-agent-preset；旧式 ~/.dsh/.agent-presets 迁移）、MCP server（dsh-mcp-client）、cordis 插件包、自定义工具、slash 命令、DSH 启动失败或 patch 解析报错诊断。纯解释/查看类提问不需要；非 DSH 的插件、技能、MCP（如 opencode、codewhale、通用 MCP server 开发）不触发。用户说"改 DSH 配置""加技能""配 MCP""改默认模型""改权限预设""改某条目配置""改 profile""装/卸 DSH 插件""DSH 启动失败""patch 报错"时使用。
+description: 仅当用户要编辑或创建 DeepSeek Harness（DSH）自身配置或扩展时使用：旧版 settings.yaml 迁移（默认模型/权限预设/主题）、profiles/*/cordis.patch.yml 与 package.json（dsh.profile.bundles）、技能创作与修复（~/.dsh/skills、~/.agents/skills、项目 .dsh/skills，含技能不生效/嵌套目录问题）、Agent preset（@deepseek-ai/dsh-agent-preset；旧式 ~/.dsh/.agent-presets 迁移）、MCP server（dsh-mcp-client）、cordis 插件包、自定义工具、slash 命令、DSH 启动失败或 patch 解析报错诊断。纯解释/查看类提问不需要；非 DSH 的插件、技能、MCP（如 opencode、codewhale、通用 MCP server 开发）不触发。用户说"改 DSH 配置""加技能""配 MCP""改默认模型""改权限预设""改某条目配置""改 profile""装/卸 DSH 插件""DSH 启动失败""patch 报错"时使用。
 ---
 
 # 定制 DeepSeek Harness — customize-dsh
@@ -241,7 +241,28 @@ export function apply(ctx: Context) {
 - `custom` 是保留名（派生的"非预设"状态，不可切换）
 - `SandboxMode`：`read-only`（拒绝写入）| `workspace-write`（工作区根+后端临时区）| `danger-full-access`（绕过隔离，直接 spawn 原始 argv）
 - `ApprovalPolicy`：`ask`（委托应答者链，无应答 fail-closed 为 unavailable）| `never`（确定性 `rejected`，不分发应答者）
-- `settings.yaml` 的 `permission.defaultPreset` 设置默认；新会话进程后备默认 `workspace-write`（`DSH_PERMISSION_MODE` 可改）
+- **用户修改未来新会话的默认预设**：在 Web GUI 的「通用设置」中修改 Permission 默认项。它读写 `permission` Settings namespace 的 `defaultPreset`，并持久化到当前 profile；只影响之后创建的新会话，不改写现有或恢复中的会话。
+- **部署者配置预设表与配置默认值**：在当前 profile 的 `cordis.patch.yml` 中修改 `id: permission`、`name: '@deepseek-ai/dsh-permission-presets'` entry 的 `config.presets` / `config.defaultPreset`。`defaultPreset` 必须指向 `presets` 中实际配置的 key；未显式设置时，上游从组合后的 sandbox/approval 默认值推断（随附 base 组合通常为 `workspace-write`，`DSH_PERMISSION_MODE` 会影响底层组合默认值）。
+
+  ```yaml
+  # 示例是该 entry 的完整 config；id-targeted patch 会整体替换 config，
+  # 修改时必须保留目标 profile 已有的全部 presets 和其他字段。
+  - id: permission
+    name: '@deepseek-ai/dsh-permission-presets'
+    config:
+      presets:
+        read-only:
+          sandbox: read-only
+          approval: ask
+        workspace-write:
+          sandbox: workspace-write
+          approval: ask
+        danger-full-access:
+          sandbox: danger-full-access
+          approval: never
+      defaultPreset: workspace-write
+  ```
+- **旧版文件边界**：`$DSH_HOME/settings.yaml` 中的 `permission.defaultPreset` 仅在旧文件首次迁移导入时读取；文件会先重命名为 `settings.yaml.imported`，之后再导入。迁移完成后再编辑旧 `settings.yaml` 不会改变当前默认权限，也不会触发重新导入。
 - 会话被拒操作报告 `[sandbox: ...]` 标记——属策略拒绝而非命令失败，不要绕道重试；如本会话允许且真实被拒，可用 `sandbox_permissions` 一次性升级精确命令
 
 ## 命令与系统提示

@@ -80,13 +80,13 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
 
 | 定制面 | 关键文件/机制 |
 |--------|--------------|
-| 配置 | `settings.yaml`（默认模型/权限预设/主题） |
+| 配置 | `settings.yaml`（旧版默认模型/权限预设/主题迁移） |
 | Profile/Patch | `profiles/*/cordis.patch.yml`、`package.json` (`dsh.profile.bundles`) |
 | 技能 | `~/.dsh/skills`、`~/.agents/skills`、项目 `.dsh/skills`（6 层 rank） |
 | MCP | `@deepseek-ai/dsh-mcp-client`（stdio / streamable-http） |
 | 插件/工具/命令 | cordis 插件包、defineTool、`ctx.commands.register` |
 
-涵盖配置生效时机（HMR/热重载）、Profiles 层叠与 patch 语义（insert/disabled/整体替换）、反直觉陷阱（空/仅注释 patch 文件 throws 须用 `[]`）、区分当前 Cordis Agent preset 与已废弃的旧式目录 preset，以及逃生舱（`dev_fix_patch`/`dev_heal_links`/`dev_clear_routes`/`dev_uninject_plugin`）等。附带 `references/AUTHORITATIVE-SOURCES.md` 权威来源索引、Context7 检索流程和 `evals/evals.json`（15 个回归评估用例，包含 legacy settings 部分导入恢复）。
+涵盖配置生效时机（HMR/热重载）、Profiles 层叠与 patch 语义（insert/disabled/整体替换）、反直觉陷阱（空/仅注释 patch 文件 throws 须用 `[]`）、区分当前 Cordis Agent preset 与已废弃的旧式目录 preset，以及逃生舱（`dev_fix_patch`/`dev_heal_links`/`dev_clear_routes`/`dev_uninject_plugin`）等。附带 `references/AUTHORITATIVE-SOURCES.md` 权威来源索引、Context7 检索流程和 `evals/evals.json`（16 个回归评估用例，包含 legacy settings 部分导入恢复与权限默认值路径）。
 
 ➡️ 完整内容: [`skills/customize-dsh/SKILL.md`](./skills/customize-dsh/SKILL.md)
 
