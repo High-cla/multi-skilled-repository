@@ -12,6 +12,7 @@ DSH 是"万物皆可插件"的宿主：配置严格校验，格式错误会导�
 定制前先查权威资料，不要凭记忆猜字段：
 
 - **配置目录（所有包的可配字段与默认值）**：<https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/config-catalog.md>（按 `@deepseek-ai/dsh-*` 包分节）
+- **权威来源索引（推荐先读）**：[`references/AUTHORITATIVE-SOURCES.md`](references/AUTHORITATIVE-SOURCES.md)，包含配置、profile/HMR、settings/volatile、skills、agent preset、MCP、tools 的官方文档和源码入口，以及当前上游已核验的默认值差异。
 - **profile / patch / bundle 分层**：`packages/boot/app-boot/README.md#Profiles`、`apps/cli/reference/README.zh.md`
 - **子系统文档（中文）**：<https://github.com/deepseek-ai/deepseek-harness/tree/master/docs/subsystems>（settings、skills、tools、permission-presets、system-prompt、approval、sandbox、agent-lifecycle）
 - **组合与 HMR**：`docs/cordis-tutorial/06-composition-and-hmr.zh.md`
@@ -19,7 +20,7 @@ DSH 是"万物皆可插件"的宿主：配置严格校验，格式错误会导�
 - **cookbook**：`docs/cookbook/`（adding-a-tool、adding-a-package、extension-cookbook）
 - **agent preset**：`packages/preset/agent-presets/README.zh.md`
 
-若字段未在此 skill 说明或需确认精确形状，**抓取上述文档阅读原文**，不要猜测。
+若字段未在此 skill 说明或需确认精确形状，**抓取上述文档阅读原文**，不要猜测。Context7 当前可用时，先 resolve `/deepseek-ai/deepseek-harness`，再针对单一配置主题查询；仍需回到对应版本官方原始文档、生成 config catalog 和源码核对。
 
 ## 使配置生效（热重载 vs 重启）
 
