@@ -9,9 +9,11 @@
 3. 搜索已有 API/工具/抽象，优先复用项目原生能力。
 4. 检查触发技能：clean-code、coding-standards、systematic-debugging、writing-plans、test-driven-development 等。
 5. 先判断修改是文本、语法结构、符号关系还是语义问题，分别选 rg、sg、codebase-memory 或直接阅读。
-6. 不在事实不足时猜测架构；但简单任务不要被不必要的计划阻塞。
+6. 绿地项目先按 [ARCHITECTURE-DESIGN.md](ARCHITECTURE-DESIGN.md) 做官方网络文档调研、候选架构比较和架构决策；既有项目先理解现状，不默认重选架构。
 
 ## 2. 代码设计原则
+
+全新项目应先通过架构门禁，再开始主体实现。不要在架构边界、数据模型和关键质量属性尚未确定时先大量编写代码。
 
 ### 简单、聚焦、可组合
 
