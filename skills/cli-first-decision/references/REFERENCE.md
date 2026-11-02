@@ -189,7 +189,6 @@ return contents.map((content, index) => ({
 ### 9.3 并发调度
 
 - DSH 当前 `@deepseek-ai/dsh-tool-executor-ptc` 文档将 `maxParallelSubCalls` 默认值列为 10，且必须是正整数；设为 1 即串行。根 `run_code` 调用本身是 exclusive；该上限约束每个程序内部并行安全的嵌套调用。该默认值具有版本属性，不要假设未来或定制 runtime 固定不变。
-- `run_code` 根调用本身是 exclusive；`maxParallelSubCalls` 默认 10，必须为正整数，设为 1 即串行。
 - `Promise.all` 只代表程序发起并发意图，不保证子调用一定同时执行。
 - 只有工具当前参数被调度策略判定为 parallel 时才允许重叠；exclusive/未知调用 fail-closed 并形成串行屏障。
 - 共享文件写入、远程副作用、提交/发布/删除等操作不得仅为加速而并行。先拆分只读预检和副作用阶段。
