@@ -1,7 +1,7 @@
 {
   "skill": "cli-first-decision",
-  "version": "3.3",
-  "description": "Regression cases for DSH/FastCtx tool routing, PTC SDK orchestration, CLI selection, programming quality, engineering tradeoffs, and speed/memory-first optimization.",
+  "version": "3.4",
+  "description": "Regression cases for CLI/DSH routing, PTC, programming quality, speed/memory optimization, greenfield architecture selection, and web-based authoritative documentation research.",
   "cases": [
     {
       "id": "E01",
@@ -409,6 +409,66 @@
         "Continue until theoretical/hardware/resource bounds or measurement-noise limits leave no actionable gain",
         "Keep low-level optimizations isolated and covered by regression tests",
         "Report remaining bottlenecks, assumptions and verification evidence"
+      ]
+    },
+    {
+      "id": "E48",
+      "input": "Start a brand-new application with no existing codebase or architecture.",
+      "expected": [
+        "Define functional scope and measurable quality attributes before coding",
+        "Research current official documentation and mature reference architectures over the network",
+        "Compare at least two viable architecture candidates against hard constraints and workload",
+        "Record the selected architecture and important tradeoffs before large-scale implementation"
+      ]
+    },
+    {
+      "id": "E49",
+      "input": "Choose a language runtime, framework, database and messaging system for a greenfield project.",
+      "expected": [
+        "Search version-matched official docs, compatibility notes, limits and release/deprecation information",
+        "Open original documentation pages and verify claims instead of relying on search snippets",
+        "Record source URLs, versions/updated dates, applicable assumptions and unresolved gaps",
+        "Use independent reproducible evidence to cross-check consequential performance claims"
+      ]
+    },
+    {
+      "id": "E50",
+      "input": "Select an architecture for a latency- and memory-sensitive workload.",
+      "expected": [
+        "Treat performance and peak memory as first-class architecture quality attributes",
+        "Compare network hops, serialization, process/runtime overhead, data locality, queue/cache budgets and algorithmic work",
+        "Use representative prototypes, benchmarks or load tests where the choice depends on uncertain performance",
+        "Avoid assuming distributed or microservice architecture is inherently faster or more memory-efficient"
+      ]
+    },
+    {
+      "id": "E51",
+      "input": "A greenfield team proposes microservices before defining boundaries or operational capabilities.",
+      "expected": [
+        "Assess stable domain boundaries, independent deployment/scaling needs and team ownership",
+        "Evaluate CI/CD, observability, tracing, security, incident response and operational readiness",
+        "Account for network latency, partial failures, consistency and per-service memory/compute overhead",
+        "Compare against a modular monolith or other simpler baseline and choose based on evidence"
+      ]
+    },
+    {
+      "id": "E52",
+      "input": "Finalize a significant greenfield architecture decision for review and implementation.",
+      "expected": [
+        "Create an ADR with context, constraints, options, decision, consequences and evidence links",
+        "Create C4 context/container diagrams when they clarify system boundaries and deployment units",
+        "Record benchmark/prototype evidence, versions, assumptions, rollback/migration and unresolved risks",
+        "Pass an architecture gate before large-scale coding begins"
+      ]
+    },
+    {
+      "id": "E53",
+      "input": "The current agent environment has no working web search or network access during architecture research.",
+      "expected": [
+        "Attempt only available official-document access paths within permissions",
+        "Clearly report that network research could not be completed",
+        "Do not fabricate sources, dates, version claims or claim to have verified current documentation",
+        "Mark architecture choices dependent on missing research as assumptions or unresolved risks"
       ]
     }
   ]
