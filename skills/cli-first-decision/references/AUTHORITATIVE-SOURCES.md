@@ -26,6 +26,7 @@
 - [官方 Node PTC runtime 文档（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/ptc-runtime/ptc-runtime-node/README.zh.md) · [English](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/ptc-runtime/ptc-runtime-node/README.md) — 当前 Node provider 的执行模式、沙箱后端、超时、输出和 V8 heap 限制。
 - [实验性 Python PTC runtime](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/experimental/ptc-runtime-python) · [中文 README](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/experimental/ptc-runtime-python/README.zh.md) — Python provider；当前为显式组合的实验包，没有已发布 profile 默认启用，且文件隔离能力不同于已发布 Node provider。
 - [模块依赖图](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/module-graph.md) — 核验当前 PTC runtime、Node provider、sandbox 和 executor 的真实包边界。
+- [PTC dispatcher implementation](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/core/tool-executor-ptc/src/ptc.ts) — 活跃 runtime language、额外上下文转发、绑定失败/取消与 drain 行为；对照对应行号和当前 commit 核验。
 - [并行工具调用实现说明](https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/notes/implemented/feature/2026-07-10-parallel-tool-call-execution.md) — 并发调度的实现背景；以当前代码/schema 为最终准据。
 - [PTC Runtime 开发者文档](https://deepseek-harness.github.io/deepseek-harness/en/reference/subsystems/ptc-runtime) — runtime request/result、provider、sandbox facts 和错误分类。
 - [工具目录在线文档](https://deepseek-harness.github.io/deepseek-harness/en/reference/tool-catalog) — 发布文档入口；版本敏感细节应回到已安装 commit 的仓库源码。
@@ -116,6 +117,7 @@ Context7 检索到的 jq/ripgrep/Bash 行为须按目标版本复核：jq `--slu
 
 ## 5. Shell、POSIX 与 Windows Git Bash
 
+- [Microsoft `cmd` command reference](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/cmd) · [`echo`](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/echo) · [`set`](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/set) — CMD 参数、元字符、环境变量和括号/引号语义。
 - [GNU Bash Reference Manual](https://www.gnu.org/software/bash/manual/bash.html) — Bash 自身语法、扩展、参数展开、重定向和执行语义；Bash 不等于纯 POSIX `sh`。
 - [POSIX.1-2024 / The Open Group Base Specifications Issue 8](https://pubs.opengroup.org/onlinepubs/9799919799/) — POSIX Shell Command Language 与标准工具的可移植基线。
 - [Git for Windows Technical Overview](https://gitforwindows.org/technical-overview.html) — Git for Windows 使用 MSYS2 子集并提供 Git Bash。
@@ -140,7 +142,7 @@ Context7 检索到的 jq/ripgrep/Bash 行为须按目标版本复核：jq `--slu
 | `jq` | [jq 1.8 Manual](https://jqlang.org/manual/) | 安装版本手册；注意 `--slurp` 会把全部输入收集成数组，可能显著增加内存 |
 | `yq` | [Mike Farah yq 文档](https://mikefarah.gitbook.io/yq) · [源码仓库](https://github.com/mikefarah/yq) | 区分 Mike Farah yq 与 Python/kislyuk 等同名工具；版本、表达式和输入格式 |
 | `curl` | [curl Documentation](https://curl.se/docs/) · [Everything curl](https://everything.curl.dev/) | HTTP status、重定向、超时、TLS、代理、退出码和响应体；`-f`/重试行为要按需求选择 |
-| `zstd` | [CLI README](https://github.com/facebook/zstd/blob/dev/programs/README.md) · [zstd manual](https://facebook.github.io/zstd/zstd_manual.html) · [源码仓库](https://github.com/facebook/zstd) | 压缩格式/参数/多线程与解压内存；流式场景使用 `-d -c` |
+| `zstd` | [CLI README](https://github.com/meta/zstd/blob/dev/programs/README.md) · [zstd manual](https://facebook.github.io/zstd/zstd_manual.html) · [源码仓库](https://github.com/meta/zstd) | 压缩格式/参数/多线程与解压内存；流式场景使用 `-d -c` |
 | `duckdb` | [CLI Overview](https://duckdb.org/docs/current/clients/cli/overview) · [源码仓库](https://github.com/duckdb/duckdb) | CLI 与 SQL 引擎版本；输入读法、外部文件扫描、内存预算和临时目录 |
 | `difft` / Difftastic | [Difftastic Manual](https://difftastic.wilfred.me.uk/) · [源码仓库](https://github.com/Wilfred/difftastic) | 语法 parser 支持范围和配置；结构化 diff 是审阅辅助，不替代测试 |
 | `delta` | [Delta Manual](https://dandavison.github.io/delta/) · [源码仓库](https://github.com/dandavison/delta) | 它是 Git diff 的展示/pager 工具，不改变 diff 语义，也不负责证明变更正确 |
