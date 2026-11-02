@@ -170,7 +170,7 @@ user-invocable: true              # 可选，默认 true
 - entry 的 `id` 与 `config.id` 不是同一个标识；不要互换。
 - `plugins` 是 Cordis 子 entry 列表，子插件仍受 Loader dependency、schema、scope 和 lifecycle 规则约束。
 - 随包的 `@deepseek-ai/dsh-agent-preset` README 说明声明会提前加载，变更影响随后创建的 Agent；已有 Agent composition 保持稳定。
-- 默认 preset / 是否允许用户选择属于 `agent-presets` settings namespace 的策略；不要把“默认值影响新会话”解释为现有会话自动切换。
+- `@deepseek-ai/dsh-agent-preset-registry` 的 `config.default` 是部署默认 preset；其 volatile 字段 `selectedDefault` 保存用户默认值，新会话在未显式指定 preset 时优先使用用户默认值。不要沿用已废弃的 `modeSelectionEnabled` 配置，也不要把默认值变更解释为现有会话自动切换。
 - 如需新增或复制 preset，优先使用当前 Web UI/Agent Preset 管理能力；若通过运行时 API 或工具操作，先从当前环境的 API/工具 schema 确认可用方法（例如 `agentPresets` service），不要假设旧版 `copy/remove` 或文件系统布局仍可用。
 - preset plugin row 的配置 patch 遵循普通 Cordis patch 语义：按 entry id 定位，整份替换 config 时重述完整 `plugins` 列表；不要直接编辑随包安装目录中的 shipped composition。
 
