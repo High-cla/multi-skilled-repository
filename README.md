@@ -100,7 +100,7 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
 |------|------|
 | 逆向 | 找游戏生成API（`DirectoryMaster.Item` 类）+ 主背包入口 |
 | 提取 | 内嵌资源 JSON → `items_data.js`（ID/名称/分类） |
-| 服务器 | HttpListener (localhost:26880)，待处理队列上限 128、单请求最多 25 件、主线程每帧最多生成 4 件；HTTP 202 仅表示已入队，状态通过 /api/spawn/status 查询 |
+| 服务器 | HttpListener (localhost:26880)，待处理队列上限 128、单请求最多 25 件、主线程每帧最多生成 4 件；HTTP 202 仅表示已入队，状态通过 /api/spawn/status 查询；浏览器 Origin 使用精确 allowlist |
 | 网页 | items_data.js 外置加载；目录字段仅通过 DOM API/textContent 渲染；按钮区分入队、处理中、游戏成功与 Mock 模拟完成 |
 | 验证 | mock 明确区分入队与模拟完成；模拟成功不代表真实游戏已入包 |
 
