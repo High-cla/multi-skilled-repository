@@ -38,7 +38,7 @@ DSH 是"万物皆可插件"的宿主：配置严格校验，格式错误会导�
 | 范围 | 路径 |
 |------|------|
 | Harness home | `$DSH_HOME`，缺省 `~/.dsh` |
-| 旧版设置导入文件 | `$DSH_HOME/settings.yaml`（仅在兼容迁移场景核验；当前 Settings 文档说明旧文件只导入一次并改名为 `settings.yaml.imported`） |
+| 旧版设置导入文件 | `$DSH_HOME/settings.yaml`（兼容导入入口；首次写入前重命名为 `settings.yaml.imported`，重命名不代表所有 section 均已导入） |
 | home 级 patch（所有 profile 共享，优先于 profile 层） | `$DSH_HOME/cordis.patch.yml` |
 | 用户凭据 | `$DSH_HOME/.credentials.yaml` |
 | 用户环境层 | `$DSH_HOME/.env`（优先级低于继承环境与调用目录 .env） |
@@ -56,7 +56,14 @@ DSH 是"万物皆可插件"的宿主：配置严格校验，格式错误会导�
 
 ## Settings 与旧版 settings.yaml 迁移
 
-**不要把 `$DSH_HOME/settings.yaml` 当作当前通用配置数据库或实时配置文件。** 当前上游 Settings package 文档说明：早期版本遗留的 `settings.yaml` 会在 Settings 启动后、Loader 完成条目加载时导入一次；成功处理后文件改名为 `settings.yaml.imported`。不应把它当作当前推荐写入位置。
+**不要把 `$DSH_HOME/settings.yaml` 当作当前通用配置数据库或实时配置文件。** 当前上游 Settings package 文档说明：早期版本遗留的 `settings.yaml` 会在 Settings 启动、Loader 完成所有条目加载后尝试导入一次；每个 section 按其 id 写入当前组合中对应的 profile entry（例如 `ui-developer-tools` → `ui-settings`、`ui-onboarding` → `ui-settings-general`、`shell` → 当前平台的 shell 执行器 entry）。**文件会在第一次写入前先重命名为 `settings.yaml.imported`，然后才逐 section 写入**。当前组合拒绝的 section 会记录日志，并只保留在这个重命名文件中；因此，重命名不以所有 section 导入成功为前提，`settings.yaml.imported` 也不代表迁移已完整成功。被拒绝的 section 不会因为文件已重命名而自动重试。
+
+**部分导入后的检查与恢复：**
+
+- 检查本次启动日志中的拒绝/导入错误，并检查 `$DSH_HOME/settings.yaml.imported` 中仍保留的旧 section。先备份该文件和当前 profile 配置。
+- 按当前 profile 的实际 entry id 和该版本 Config schema 逐项核对；不要假设旧 section 名始终等于当前 entry id，也不要把整份旧 section 直接覆盖到现有配置。
+- 普通 Config 值按当前 profile 的 `cordis.patch.yml` 规则选择性恢复；只有 schema 明确声明为 `.volatile()` 的字段才通过 Settings 表单/API 修改。
+- 不要把 `settings.yaml.imported` 直接改回 `settings.yaml` 并重启作为默认恢复方式。应先确认目标 entry、字段和现有覆盖层，再人工选择需要恢复的值；已重命名的文件不会自动重试被拒绝的 section。
 
 当前配置编辑边界：
 
