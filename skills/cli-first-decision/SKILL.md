@@ -3,10 +3,10 @@ name: cli-first-decision
 description: "多步骤任务的工具选择、执行编排与成本优化协议。适用于本地文件读写、全文与结构搜索、批量处理、符号与调用链分析、API 调试、并行执行、子智能体委派和工具选型。触发词：用哪个工具、怎么执行、先做什么、能否并行、能否合并、批量操作、代码搜索、调用链、影响面、任务委派。"
 metadata:
   author: High-cla
-  version: "3.5"
+  version: "3.6"
 ---
 
-# CLI-First Decision 3.5
+# CLI-First Decision 3.6
 
 ## 1. 目标与原则
 
@@ -20,7 +20,7 @@ metadata:
 - 并行必须考虑调用成本、限流、上下文和写入冲突。
 - 从零开始先进行需求/质量属性分析、网络官方文档调研、候选架构比较和风险原型，再确定架构并开始主体实现。
 - 具体代码实现优先追求更短运行时间和更低峰值内存，先分析复杂度/理论下界，再用基准与剖析迭代逼近最优。
-- 对 DSH/PTC、FastCtx、CLI 和性能工具，优先查阅 [AUTHORITATIVE-SOURCES.md](references/AUTHORITATIVE-SOURCES.md) 中的项目仓库、版本匹配手册和规范；再按本机版本/schema 校验。
+- 对 DSH/PTC、FastCtx、CLI 和性能工具，优先查阅 [AUTHORITATIVE-SOURCES.md](references/AUTHORITATIVE-SOURCES.md) 中的项目仓库、版本匹配手册和规范；Context7 可用时先解析库 ID、查询目标版本文档，再回到官方原文核验；最后按本机版本/schema 校验。
 - 写操作范围明确、修改最小、可验证、可恢复。
 - 工具返回成功不等于业务成功；完成必须有证据。
 
