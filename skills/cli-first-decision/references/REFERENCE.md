@@ -1,14 +1,22 @@
-# CLI-First Decision 3.2 — Reference
+# CLI-First Decision 3.4 — Reference
 
 本参考表以 DSH 环境提供的信息为基准。工具调用前仍需确认当前注册状态和参数 schema；未注册的可选工具不得假设存在。
 
 ## 0. 扩展参考
 
 - [CLI 工具链、命令模板和 FastCtx Shell 约定](CLI-TOOLS.md)
-- [编程规则与代码质量约定](PROGRAMMING-RULES.md)
+- [从零开始的架构选择、官方文档调研与 ADR/C4](ARCHITECTURE-DESIGN.md)
+- [编程规则、速度与内存优先优化](PROGRAMMING-RULES.md)
 - [工程原则、定律与设计取舍](ENGINEERING-PRINCIPLES.md)
 
-## 1. 工具路由速查
+## 1. 任务类型路由
+
+| 任务 | 先读 |
+|---|---|
+| 从零开始、系统重建、重大架构选择、技术栈调研 | [ARCHITECTURE-DESIGN.md](ARCHITECTURE-DESIGN.md) |
+| 具体功能实现、代码优化 | [PROGRAMMING-RULES.md](PROGRAMMING-RULES.md) |
+
+## 2. 工具路由速查
 
 | 场景 | 首选 | 备选/降级 | 不要这样做 |
 |---|---|---|---|
@@ -28,7 +36,7 @@
 
 GitHub、Context7 插件不是本地 DSH 的必需依赖。它们只有在当前运行时实际注册时才可选择。
 
-## 2. FastCtx 操作约定
+## 3. FastCtx 操作约定
 
 | 工具 | 用途 | 要点 |
 |---|---|---|
@@ -49,7 +57,7 @@ GitHub、Context7 插件不是本地 DSH 的必需依赖。它们只有在当前
 
 非零退出码也需要读取 stdout、stderr 和退出状态后再判断。不得把非零退出码误判为工具崩溃，也不得因命令启动成功就报告业务成功。
 
-## 3. CLI 命令模板
+## 4. CLI 命令模板
 
 ### 搜索
 
@@ -86,7 +94,7 @@ sg --pattern 'console.log($A)' --lang ts src
 
 优先 FastCtx replace 的 dry-run。使用 sd 时先检查本机版本帮助和预览能力；纯文本替换不得用于依赖语法结构的代码改写。
 
-## 4. ast-grep 规则调试
+## 5. ast-grep 规则调试
 
 1. 定义正例、反例和边界样例。
 2. 将目标表达式拆成最小子模式。
@@ -97,7 +105,7 @@ sg --pattern 'console.log($A)' --lang ts src
 7. rewrite 前先输出匹配和预览结果。
 8. 检查命中数量、diff、格式和类型检查。
 
-## 5. codebase-memory 交叉验证
+## 6. codebase-memory 交叉验证
 
 适合：符号定义、引用、调用者/被调用者、依赖边、模块架构、影响面。
 
@@ -119,7 +127,7 @@ FastCtx grep / rg / sg 核查当前源码
 
 若图谱没有结果或与源码冲突，标记索引可能不完整/过期，以当前源码和可复现测试为准。
 
-## 6. 并行与写入冲突
+## 7. 并行与写入冲突
 
 | 情况 | 策略 |
 |---|---|
@@ -133,7 +141,7 @@ FastCtx grep / rg / sg 核查当前源码
 
 派发前为每个执行者列出 Read、Write、共享接口。并行数量服从真实工具限制；不要设定未经验证的固定上限。
 
-## 7. 工具不可用时的降级
+## 8. 工具不可用时的降级
 
 | 首选不可用 | 降级顺序 |
 |---|---|
@@ -146,7 +154,7 @@ FastCtx grep / rg / sg 核查当前源码
 | GitHub 插件 | 本地 git clone；公开只读用 Web/curl；远程写入需认证通道 |
 | MCP 工具 | 仅对已 bake 工具尝试 mcp2cli；否则使用等价工具或报告阻塞 |
 
-## 8. DSH PTC TypeScript SDK
+## 9. DSH PTC TypeScript SDK
 
 PTC preset 使用 `run_code` 传输入口和自动生成的 `tools:sdk` 类型化工具 SDK。SDK 根据当前 agent 可见的工具注册表生成；读取本会话注入的签名，不硬编码或猜测工具名/参数。
 
@@ -186,7 +194,7 @@ return contents.map((text, index) => ({
 - 程序运行失败返回结构化 `CODE_RUN_FAILED`。
 - 普通副作用不会因程序失败自动回滚；非幂等写入失败后先检查实际状态。
 - worker-thread 不是 OS 级文件/网络权限沙箱；按 DSH 工具权限和 sandbox 契约执行，不用 Node API/子进程绕过工具边界。
-## 9. 验收记录
+## 10. 验收记录
 
 一次任务至少记录：
 
