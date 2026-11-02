@@ -1,7 +1,7 @@
 {
   "skill": "cli-first-decision",
-  "version": "3.4",
-  "description": "Regression cases for CLI/DSH routing, PTC, programming quality, speed/memory optimization, greenfield architecture selection, and web-based authoritative documentation research.",
+  "version": "3.6",
+  "description": "Regression cases for DSH PTC contracts, FastCtx versioned MCP behavior, Context7 documentation retrieval, official CLI manuals, programming quality, and speed/memory optimization.",
   "cases": [
     {
       "id": "E01",
@@ -469,6 +469,125 @@
         "Clearly report that network research could not be completed",
         "Do not fabricate sources, dates, version claims or claim to have verified current documentation",
         "Mark architecture choices dependent on missing research as assumptions or unresolved risks"
+      ]
+    },
+    {
+      "id": "E54",
+      "input": "Use DSH PTC and write a run_code program that calls multiple registered tools.",
+      "expected": [
+        "Consult the installed DSH version and current tools:sdk/tool schema rather than relying on memory",
+        "Use only run_code as the model-facing PTC entry point and invoke the generated runtime-language SDK inside it",
+        "Supply the schema-required code and description fields",
+        "Do not assume every PTC runtime emits TypeScript declarations"
+      ]
+    },
+    {
+      "id": "E55",
+      "input": "Parallelize independent PTC calls while ensuring correctness and memory safety.",
+      "expected": [
+        "Respect the installed DSH maxParallelSubCalls setting; current documented default is version-specific",
+        "Allow overlap only for calls classified concurrency-safe; exclusive or unknown calls remain serialized",
+        "Remember PTC intermediate binding values are execution-local and currently not byte-bounded",
+        "Bound/filter/stream intermediate data and return only the needed outer result"
+      ]
+    },
+    {
+      "id": "E56",
+      "input": "Use FastCtx filesystem, replace and Bash tools in an installed environment.",
+      "expected": [
+        "Check installed FastCtx version and use the matching release tag and schema",
+        "Know the nine current MCP tool roles and that Bash/job tools may require explicit enablement",
+        "Respect FastCtx host-process permissions and do not assume the host app sandbox constrains its MCP server",
+        "Verify version-sensitive glob behavior and preview writes before applying them"
+      ]
+    },
+    {
+      "id": "E57",
+      "input": "Run a shell pipeline on Windows DSH/Git Bash with several CLI tools.",
+      "expected": [
+        "Use Bash and POSIX/MSYS-compatible syntax instead of PowerShell-specific syntax",
+        "Consult the relevant upstream manual and the installed binary --help/version",
+        "Handle MSYS2 Windows path conversion and use NUL-safe path pipelines",
+        "Use non-interactive behavior when there is no TTY and do not rely on aliases"
+      ]
+    },
+    {
+      "id": "E58",
+      "input": "Optimize a hot path for minimum runtime and memory, using appropriate profiling tools.",
+      "expected": [
+        "Choose the official profiler/measurement APIs for the actual runtime and operating system",
+        "Measure CPU time and allocations/heap/peak RSS with representative workloads",
+        "Record tool/runtime versions and repeat benchmark runs using the same input and environment",
+        "Use Amdahl's law and profile evidence to target the dominant bottleneck"
+      ]
+    },
+    {
+      "id": "E59",
+      "input": "Transform a very large JSON stream with jq while keeping memory bounded.",
+      "expected": [
+        "Consult the installed jq manual/version and prefer streaming filters when possible",
+        "Recognize --slurp materializes the entire input into one array and may greatly increase memory",
+        "Measure peak memory and avoid unnecessary intermediate materialization",
+        "Validate output correctness and exit status"
+      ]
+    },
+    {
+      "id": "E60",
+      "input": "Research a third-party library's current API using Context7 in an environment where Context7 tools are available.",
+      "expected": [
+        "Call resolve_library_id before query_docs unless the exact Context7 library ID was supplied",
+        "Choose the matching library and version using project lockfiles and result reputation/coverage",
+        "Query one concrete topic at a time",
+        "Verify consequential API and version claims against the official original documentation or source"
+      ]
+    },
+    {
+      "id": "E61",
+      "input": "The local DSH workstation does not have Context7 installed, but a task needs current library documentation.",
+      "expected": [
+        "Do not claim Context7 is installed or require the user to install it",
+        "Use available official documentation, release notes and source repositories instead",
+        "Keep Context7 as an optional retrieval method, not a local runtime dependency"
+      ]
+    },
+    {
+      "id": "E62",
+      "input": "A FastCtx installation may use either the stable MCP release or a new major-version beta.",
+      "expected": [
+        "Check fastctx --version and identify the actual binary/source",
+        "Distinguish v0.2.6 stable MCP documentation from the v1.0.1-beta.13 World rebuild pre-release",
+        "Use the matching tag/release and tool schema rather than mixing behavior between major generations",
+        "Verify glob/replace/Bash and job semantics against the installed build"
+      ]
+    },
+    {
+      "id": "E63",
+      "input": "Optimize memory use inside a DSH PTC program that invokes tools returning large intermediate objects.",
+      "expected": [
+        "Recognize PTC intermediate binding values are execution-local and have no byte-size cap in the PTC executor contract",
+        "Do not mistake Node maxMessageBytes or maxOldGenerationSizeMb for a total cap on intermediate result objects or process RSS",
+        "Bound, filter, stream, aggregate and release large values within the program",
+        "Distinguish outer maxOutputBytes from internal binding values"
+      ]
+    },
+    {
+      "id": "E64",
+      "input": "Select a DSH PTC execution mode and configure its safety and resource limits.",
+      "expected": [
+        "Distinguish per-call, vm-script with optional scriptPersistence, and persistent-in-memory modes",
+        "Check provider-specific timeout, output, V8 old-generation heap, control-message and pending-call defaults",
+        "Verify sandbox enforcement facts; language/isolation descriptors alone do not prove confinement",
+        "Treat Python provider as an explicit experimental runtime with different sandbox capability, not as equivalent to Node"
+      ]
+    },
+    {
+      "id": "E65",
+      "input": "Design a greenfield system with several third-party frameworks and databases, and Context7 is available.",
+      "expected": [
+        "Resolve Context7 library IDs for the actual libraries before querying docs",
+        "Use version-specific IDs compatible with package manifests/lockfiles where available",
+        "Query each architectural concern separately, such as performance, consistency, deployment and security",
+        "Verify Context7 results against the official docs/repository and record source URLs, versions and dates"
       ]
     }
   ]

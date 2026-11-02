@@ -1,5 +1,7 @@
 # 工程原则、定律与设计取舍
 
+原作者/原始资料索引见 [AUTHORITATIVE-SOURCES.md](AUTHORITATIVE-SOURCES.md)。Context7 可用于发现库/规范文档，但原则的原文与适用范围须回到原始来源核验。KISS、YAGNI、SOLID 等属于实践原则，不是可机械套用的强制技术标准。
+
 原则用于帮助判断，不是互相独立的硬规则。遇到冲突时，以用户目标、既有契约、风险、可验证证据和整体成本为准。
 
 ## 1. 系统演化与复杂性
@@ -30,7 +32,7 @@
 
 ### 阿姆达尔定律
 
-整体性能提升受可优化部分在总耗时中占比限制。
+整体性能提升受可优化部分在总耗时中占比限制。原始论文：Gene M. Amdahl, 1967, [Validity of the single processor approach to achieving large scale computing capabilities](https://doi.org/10.1145/1465482.1465560)。
 
 **实践**：先 profile 并定位瓶颈，再优化关键路径；不要只优化显眼但占比很小的局部。
 
