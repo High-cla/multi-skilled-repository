@@ -630,6 +630,36 @@
         "Do not automatically elevate the whole script; request authorization and elevate only the necessary operation",
         "Do not claim LongPathsEnabled alone enables long paths for every application"
       ]
+    },
+    {
+      "id": "E70",
+      "input": "Use DSH PTC when the currently loaded runtime could be TypeScript or Python.",
+      "expected": [
+        "Read ctx.ptcRuntime.language and the injected tools:sdk instructions before writing run_code",
+        "Use TypeScript syntax only when the active runtime generates the TypeScript SDK",
+        "Use the injected Python program syntax and SDK when the active runtime is Python",
+        "Do not assume experimental Python runtime has the same sandbox capabilities as the Node provider"
+      ]
+    },
+    {
+      "id": "E71",
+      "input": "A PTC nested tool returns an image or additionalContexts. Determine what enters the model context.",
+      "expected": [
+        "Distinguish outer run_code logs/return from independently forwarded image and additionalContexts payloads",
+        "Account for forwarded content in the model context budget",
+        "Do not assume every nested result must be explicitly returned by run_code to reach the conversation",
+        "Keep nested dispatch persistence and model-context forwarding as separate mechanisms"
+      ]
+    },
+    {
+      "id": "E72",
+      "input": "A PTC Promise.all batch includes independent calls, but one child binding may reject and successful branches must be retained.",
+      "expected": [
+        "Explain that an uncaught Promise.all rejection rejects the aggregate and can fail the outer code run",
+        "Use Promise.allSettled or per-call try/catch to capture successful and failed outcomes separately",
+        "Remember DSH may cancel and drain still-running bindings after an outer program failure",
+        "Do not assume prior side effects are rolled back"
+      ]
     }
   ]
 }
