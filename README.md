@@ -70,7 +70,7 @@
 | 长任务 | run_background + job_output |
 | MCP 退路 | 仅使用已 bake 的 mcp2cli |
 
-GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运行时真实注册时才可选用。从零开始先进行架构选型与网络官方文档调研，并明确速度/内存优先优化；并新增 DSH/FastCtx/CLI 上游权威文档索引与 Context7 文档检索流程；附带 [64 个评估用例](./skills/cli-first-decision/evals/evals.json)。
+GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运行时真实注册时才可选用。从零开始先进行架构选型与网络官方文档调研，并明确速度/内存优先优化；并新增 DSH/FastCtx/CLI 上游权威文档索引与 Context7 文档检索流程；附带 [65 个评估用例](./skills/cli-first-decision/evals/evals.json)。
 
 ➡️ [技能主体](./skills/cli-first-decision/SKILL.md) · [工具总参考](./skills/cli-first-decision/references/REFERENCE.md) · [CLI 工具链](./skills/cli-first-decision/references/CLI-TOOLS.md) · [权威文档索引](./skills/cli-first-decision/references/AUTHORITATIVE-SOURCES.md) · [架构设计与官方文档调研](./skills/cli-first-decision/references/ARCHITECTURE-DESIGN.md) · [编程规则](./skills/cli-first-decision/references/PROGRAMMING-RULES.md) · [工程原则](./skills/cli-first-decision/references/ENGINEERING-PRINCIPLES.md) · [评估用例](./skills/cli-first-decision/evals/evals.json)
 
