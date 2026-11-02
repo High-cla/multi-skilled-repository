@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Regression tests for extraction, JSON-to-JS conversion, and safe page rendering."""
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -68,6 +69,36 @@ class JsonToJsTests(unittest.TestCase):
             self.assertIn("window.ITEMS =", generated)
             self.assertIn("\\u003c/script\\u003e", generated)
             self.assertNotIn("</script>", generated)
+
+    def test_extractor_to_browser_data_cli_pipeline(self):
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp) / "game-resource.bin"
+            extracted = Path(temp) / "catalog.json"
+            output = Path(temp) / "assets" / "items_data.js"
+            catalog = {
+                "records": [
+                    {"stableId": "alpha", "nameZh": "Alpha", "categories": ["TOOLS"]},
+                    {"stableId": "beta", "nameZh": "Beta", "categories": ["GOODS"]}
+                ]
+            }
+            source.write_bytes(b"resource-prefix\\xff" + json.dumps(catalog, ensure_ascii=False).encode("utf-8") + b"resource-suffix")
+
+            extractor = SCRIPTS / "extract_catalog.py"
+            converter = SCRIPTS / "json_to_js.py"
+            first = subprocess.run(
+                [sys.executable, str(extractor), str(source), '"records"', str(extracted)],
+                capture_output=True, text=True, check=False
+            )
+            self.assertEqual(first.returncode, 0, first.stderr + first.stdout)
+            second = subprocess.run(
+                [sys.executable, str(converter), str(extracted), "--output", str(output)],
+                capture_output=True, text=True, check=False
+            )
+            self.assertEqual(second.returncode, 0, second.stderr + second.stdout)
+            generated = output.read_text(encoding="utf-8")
+            self.assertIn("window.ITEMS =", generated)
+            self.assertIn('"stableId":"alpha"', generated)
+            self.assertIn('"stableId":"beta"', generated)
 
 
 class BrowserSafetyTests(unittest.TestCase):
