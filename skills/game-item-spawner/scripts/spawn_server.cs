@@ -18,6 +18,14 @@ public static class SpawnHttpServer
     private const int MaxCountPerRequest = 25;
     private const int MaxTrackedStatuses = 256;
 
+    // Add the exact origin of a trusted static site before deployment.
+    // Do not use "*" or broad suffix matching for a localhost control API.
+    private static readonly HashSet<string> AllowedOrigins =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+            "http://localhost:8090",
+            "http://127.0.0.1:8090"
+        };
+
     private sealed class SpawnJob
     {
         public string Id;
@@ -179,6 +187,21 @@ public static class SpawnHttpServer
     {
         HttpListenerRequest request = context.Request;
         string path = request.Url == null ? "" : request.Url.AbsolutePath;
+        string origin = request.Headers["Origin"];
+
+        // Browsers attach Origin to cross-origin requests. Reject unknown
+        // origins before any state-changing action (including GET /api/spawn).
+        if (!String.IsNullOrEmpty(origin))
+        {
+            if (!AllowedOrigins.Contains(origin))
+            {
+                WriteJson(context.Response, 403, "{\"ok\":false,\"state\":\"rejected\",\"err\":\"origin not allowed\"}");
+                return;
+            }
+            context.Response.Headers["Access-Control-Allow-Origin"] = origin;
+            context.Response.Headers["Vary"] = "Origin";
+        }
+
         if (request.HttpMethod == "OPTIONS")
         {
             WriteResponse(context.Response, 204, "");
@@ -370,7 +393,6 @@ public static class SpawnHttpServer
             byte[] bytes = Encoding.UTF8.GetBytes(body ?? "");
             response.StatusCode = statusCode;
             response.ContentType = "application/json; charset=utf-8";
-            response.Headers["Access-Control-Allow-Origin"] = "*";
             response.Headers["Access-Control-Allow-Methods"] = "GET, OPTIONS";
             response.Headers["Access-Control-Allow-Headers"] = "Content-Type";
             response.ContentLength64 = bytes.Length;
