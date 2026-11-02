@@ -1,7 +1,7 @@
 {
   "skill": "cli-first-decision",
-  "version": "3.1",
-  "description": "Tool-routing and execution-orchestration regression cases for DSH/FastCtx environments without assumed GitHub or Context7 plugins.",
+  "version": "3.2",
+  "description": "Regression cases for DSH/FastCtx tool routing, PTC SDK orchestration, CLI selection, programming quality, and engineering tradeoffs.",
   "cases": [
     {
       "id": "E01",
@@ -187,6 +187,158 @@
         "Do not fabricate the PTC SDK",
         "Use available native tools or the actual active execution mode",
         "Do not pretend PTC execution occurred"
+      ]
+    },
+    {
+      "id": "E23",
+      "input": "Find every call site of a symbol across modules and identify blast radius.",
+      "expected": [
+        "Use codebase-memory for symbols/call graph/impact analysis",
+        "Cross-check with current source using FastCtx/rg/sg",
+        "Do not rely on text search alone"
+      ]
+    },
+    {
+      "id": "E24",
+      "input": "Search TypeScript files when paths may contain spaces or newlines.",
+      "expected": [
+        "Use fd -0 with xargs -0 or an equivalent NUL-safe pipeline",
+        "Avoid unquoted command substitution"
+      ]
+    },
+    {
+      "id": "E25",
+      "input": "Compare a large refactor diff structurally.",
+      "expected": [
+        "Use difft for structural code diff when available",
+        "Use delta only for Git diff presentation",
+        "Do not confuse formatting with semantic verification"
+      ]
+    },
+    {
+      "id": "E26",
+      "input": "Check whether a required CLI tool is installed.",
+      "expected": [
+        "Use command -v or git-which",
+        "Do not assume aliases exist in non-interactive scripts",
+        "Do not install dependencies silently"
+      ]
+    },
+    {
+      "id": "E27",
+      "input": "Refactor a small duplicate expression in two places.",
+      "expected": [
+        "Apply KISS and DRY judgment",
+        "Do not create a new abstraction unless shared knowledge is stable and there is real reuse value"
+      ]
+    },
+    {
+      "id": "E28",
+      "input": "Optimize a slow code path.",
+      "expected": [
+        "Measure/profile before editing",
+        "Use Amdahl's law to prioritize the dominant cost",
+        "Verify performance with representative data"
+      ]
+    },
+    {
+      "id": "E29",
+      "input": "Change a public function whose callers rely on its current ordering and error behavior.",
+      "expected": [
+        "Apply Hyrum's law and inspect observable behavior/callers",
+        "Treat compatibility and migration as explicit design constraints",
+        "Add regression tests"
+      ]
+    },
+    {
+      "id": "E30",
+      "input": "Design a new system with many speculative extension points.",
+      "expected": [
+        "Apply Gall's law, Worse is Better, YAGNI and second-system-effect checks",
+        "Start with a simple working core and evolve from demonstrated requirements"
+      ]
+    },
+    {
+      "id": "E31",
+      "input": "Implement a function that handles IO, business rules, and formatting.",
+      "expected": [
+        "Apply SRP, separation of concerns, single abstraction level",
+        "Keep IO at boundaries and business logic testable"
+      ]
+    },
+    {
+      "id": "E32",
+      "input": "Add concurrency to a batch operation.",
+      "expected": [
+        "Check idempotency, shared mutable state, cancellation and concurrency limits",
+        "Parallelize only independent concurrency-safe operations",
+        "Serialize writes to shared resources"
+      ]
+    },
+    {
+      "id": "E33",
+      "input": "Decide whether to introduce an interface and dependency injection.",
+      "expected": [
+        "Apply interface programming and SOLID based on actual substitution/testing boundaries",
+        "Do not create interfaces for every single implementation by default"
+      ]
+    },
+    {
+      "id": "E34",
+      "input": "Handle untrusted external API input and internal validated domain values.",
+      "expected": [
+        "Validate and normalize at external boundaries",
+        "Fail fast on internal contract violations",
+        "Do not duplicate defensive checks throughout trusted internal layers"
+      ]
+    },
+    {
+      "id": "E35",
+      "input": "Choose between adding configuration options and using a default convention.",
+      "expected": [
+        "Apply convention over configuration for common paths",
+        "Expose configuration only for real user-controlled variation",
+        "Preserve least-surprise defaults"
+      ]
+    },
+    {
+      "id": "E36",
+      "input": "A module duplicates a value that is also maintained in a schema and generated config.",
+      "expected": [
+        "Apply single source of truth",
+        "Generate or reference derived values rather than maintaining duplicate authorities"
+      ]
+    },
+    {
+      "id": "E37",
+      "input": "Separate a state-changing operation from a query.",
+      "expected": [
+        "Use CQRS/command-query separation at the method/API boundary where useful",
+        "Avoid introducing a full CQRS architecture without demonstrated need"
+      ]
+    },
+    {
+      "id": "E38",
+      "input": "Choose a design from many proposed patterns.",
+      "expected": [
+        "Use first-principles constraints, Occam and Pareto",
+        "Choose the simplest design that meets correctness, safety and operational requirements"
+      ]
+    },
+    {
+      "id": "E39",
+      "input": "A code task has a nearby known serious quality issue and many unrelated style issues.",
+      "expected": [
+        "Fix relevant high-impact nearby issues",
+        "Avoid unrelated broad cleanup that expands the diff"
+      ]
+    },
+    {
+      "id": "E40",
+      "input": "A cross-module design introduces a new storage model and deployment dependency.",
+      "expected": [
+        "Record a short ADR",
+        "Document alternatives, rationale, risks, rollback and verification"
       ]
     }
   ]
