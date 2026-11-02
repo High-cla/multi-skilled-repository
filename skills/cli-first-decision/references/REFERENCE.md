@@ -1,11 +1,11 @@
-# CLI-First Decision 3.2 — Reference
+# CLI-First Decision 3.3 — Reference
 
 本参考表以 DSH 环境提供的信息为基准。工具调用前仍需确认当前注册状态和参数 schema；未注册的可选工具不得假设存在。
 
 ## 0. 扩展参考
 
 - [CLI 工具链、命令模板和 FastCtx Shell 约定](CLI-TOOLS.md)
-- [编程规则与代码质量约定](PROGRAMMING-RULES.md)
+- [编程规则、速度与内存优先优化](PROGRAMMING-RULES.md)
 - [工程原则、定律与设计取舍](ENGINEERING-PRINCIPLES.md)
 
 ## 1. 工具路由速查
