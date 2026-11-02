@@ -38,7 +38,7 @@ DSH 是"万物皆可插件"的宿主：配置严格校验，格式错误会导�
 | 范围 | 路径 |
 |------|------|
 | Harness home | `$DSH_HOME`，缺省 `~/.dsh` |
-| 用户设置 | `$DSH_HOME/settings.yaml`（也可 .yml/.json） |
+| 旧版设置导入文件 | `$DSH_HOME/settings.yaml`（仅在兼容迁移场景核验；当前 Settings 文档说明旧文件只导入一次并改名为 `settings.yaml.imported`） |
 | home 级 patch（所有 profile 共享，优先于 profile 层） | `$DSH_HOME/cordis.patch.yml` |
 | 用户凭据 | `$DSH_HOME/.credentials.yaml` |
 | 用户环境层 | `$DSH_HOME/.env`（优先级低于继承环境与调用目录 .env） |
@@ -50,38 +50,23 @@ DSH 是"万物皆可插件"的宿主：配置严格校验，格式错误会导�
 | 用户技能 | `$DSH_HOME/skills`（rank 400） |
 | 用户 agents 技能 | `<agentsHome>/skills`（rank 500） |
 | 随包技能 | `Config.bundledSkillDir`（rank 600） |
-| agent preset | `$DSH_HOME/.agent-presets/<id>/`（agent.cordis.yml + 可选 preset.yml + plugins/） |
+| Agent preset | 当前通过 profile composition 中的 `@deepseek-ai/dsh-agent-preset` entry 声明；旧式 `$DSH_HOME/.agent-presets/<id>/` 目录不再读取 |
 
 项目根目录 = 最近的含 `.git` 的祖先目录；找不到时用 cwd。技能本地提供方跳过 `$DSH_HOME` 的 `.system` 子目录。
 
-## settings.yaml
+## Settings 与旧版 settings.yaml 迁移
 
-顶级键 = 已注册 namespace 名。每个 namespace 解析为 `schema 默认值 → 注册方组合 base → 用户分节`。本机实例的真实形状：
+**不要把 `$DSH_HOME/settings.yaml` 当作当前通用配置数据库或实时配置文件。** 当前上游 Settings package 文档说明：早期版本遗留的 `settings.yaml` 会在 Settings 启动后、Loader 完成条目加载时导入一次；成功处理后文件改名为 `settings.yaml.imported`。不应把它当作当前推荐写入位置。
 
-```yaml
-agent-presets:
-  default: mcp-opt          # 默认 agent preset 名（影响此后创建的会话）
-permission:
-  defaultPreset: danger-full-access   # 权限预设：workspace-write | danger-full-access
-ui-theme:
-  preference: dark
-ui-conversation:
-  busyEnter: steer
-agent-default-model:
-  provider: opencode-go
-  model: deepseek-v4-flash
-  reasoningEffort: max
-llm-pi-ai:
-  providers:
-    <provider-id>:
-      models: [{ id, name, contextWindow, maxTokens }]
-      apiKeyEnv: <环境变量名>
-      # 自定义 provider 可加：displayName / api: openai-completions / baseURL
-```
+当前配置编辑边界：
 
-- 外部编辑经 `ctx.settings` 热发布；更新在写锁下先重读再原子写回，保留注释与未加载插件拥有的分节
-- 启动时存在但**非法**的文档使插件加载失败；运行中不可读/不可解析的编辑只告警并保留最后可用分节
-- provider 的 `apiKeyEnv` 指向环境变量而非明文密钥；凭据解析顺序：继承环境 → `.credentials.yaml` → 调用目录 .env → `$DSH_HOME/.env`
+- 普通插件 Config 通过 profile 的 `cordis.patch.yml`、home patch 或 `--patch` overlay 配置；后应用层优先。
+- `ctx.settings` 表单只投影插件 Config 中声明为 `.volatile()` 的字段，并按 profile entry id 定位插件实例。
+- `ctx.settings.update(ns, patch, expectedRevision)` 合并字段；`replace` 重置该 entry 的 volatile 字段后应用新值；`mutate` 按路径编辑并可保留客户端未收到的秘密字段。revision 用于拒绝过期写入。
+- 业务插件通过 Config 引用的 `.get()` 读取 volatile 值，并按 `loader/volatile-update` 等机制响应更新。普通字段不是 volatile，不能据此承诺热更新。
+- Secrets 应使用凭据服务/credential reference 或环境变量引用；不要把明文密钥写入技能示例、patch、日志或聊天回复。
+
+需要确认字段时，查当前版本的生成 config catalog 和 [Settings 子系统文档](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/settings.zh.md)，不要根据旧的本机示例猜测 namespace 或字段默认值。
 
 ## Profiles 与 patch 层
 
