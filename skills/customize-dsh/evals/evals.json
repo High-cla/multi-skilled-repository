@@ -3,54 +3,102 @@
   "evals": [
     {
       "id": 1,
-      "name": "add-local-mcp-server",
-      "prompt": "在 DSH profile 的 cordis.patch.yml 中加入本地 MCP server（C:/tools/my-mcp.exe，serverName=mymcp，toolCallTimeoutMs=300000）",
-      "notes": "iteration-1；baseline 提示词含背景泄露，已废弃该组",
-      "assertions": []
+      "name": "verify-runtime-version-before-config",
+      "prompt": "帮我改 DSH 配置，先确认当前实际运行版本和 profile，再告诉我该查哪些配置字段。",
+      "assertions": [
+        "先识别实际 dsh 可执行路径和版本，避免混用多份安装",
+        "读取目标 profile 的实际组合配置或 config catalog",
+        "不把 master 最新字段默认值直接套用到旧版本"
+      ]
     },
     {
       "id": 2,
-      "name": "create-user-skill",
-      "prompt": "创建 release-note-writer 技能装到用户级技能目录，并说明生效时机",
-      "notes": "iteration-1；baseline 提示词含背景泄露，已废弃该组",
-      "assertions": []
+      "name": "patch-whole-config-replacement",
+      "prompt": "把 mcp-fastctx 的 toolCallTimeoutMs 改为 60000，其他配置保持不变。",
+      "assertions": [
+        "先读取目标 entry 完整 config",
+        "id-targeted patch 会整体替换 config，必须保留并重述原字段",
+        "优先使用可编辑 settings API 或准确保留全部字段的 patch"
+      ]
     },
     {
       "id": 3,
-      "name": "change-default-model",
-      "prompt": "把 DSH 默认模型从 deepseek-v4-flash 换成 hy3（provider 不变），其他不动",
-      "notes": "iteration-1；baseline 提示词含背景泄露，已废弃该组",
-      "assertions": []
+      "name": "disabled-entry-dialect",
+      "prompt": "暂时禁用一个 profile 插件，但保留配置以便之后恢复。",
+      "assertions": [
+        "使用 entry 的 disabled: true 语义",
+        "不编造 disable: { id } patch operation",
+        "保留原 entry id/name/config 以便重新启用"
+      ]
     },
     {
       "id": 4,
-      "name": "patch-empty-file-crash",
-      "prompt": "DSH 启动失败，cordis.patch.yml 只有注释（解析失败）。修复并解释原因。",
+      "name": "empty-patch-file",
+      "prompt": "DSH 启动失败，cordis.patch.yml 只有注释。如何修复？",
       "assertions": [
-        "cordis.patch.yml 修复为合法 YAML 数组（[] 或有效条目）",
-        "最终回复解释空/仅注释文件会被解析为 nothing 而抛错",
-        "cordis.yml/package.json 未改动"
+        "说明空/仅注释 YAML 可能解析为非数组结果而失败",
+        "建议使用 [] 表示空 patch 层或写入有效 entry list",
+        "修改前备份并用 dump-config 验证"
       ]
     },
     {
       "id": 5,
-      "name": "config-replace-preserve",
-      "prompt": "把 mcp-fastctx 条目的 toolCallTimeoutMs 从 300000 改为 60000，其他配置不动。",
+      "name": "profile-hmr-differences",
+      "prompt": "我改了 cordis.patch.yml，为什么当前 DSH 会话没有热更新？",
       "assertions": [
-        "toolCallTimeoutMs 为 60000",
-        "serverName/command/transport 等原字段未被整体替换丢掉",
-        "id 条目数保持 1",
-        "最终回复说明改动方法（整体替换需重述字段）"
+        "说明 HMR 由 profile composition 决定，不是所有 profile 默认启用",
+        "要求检查 dsh --profile <name> --dump-config 中的 HMR plugin",
+        "区分启用 HMR 的 profile 与启动时应用 patch 的 profile"
       ]
     },
     {
       "id": 6,
-      "name": "skill-not-discovered",
-      "prompt": "技能 release-notes 放在嵌套目录且 frontmatter 缺 description，会话看不到，诊断并修复。",
+      "name": "settings-volatile-only",
+      "prompt": "settings.yaml 里所有配置改完都应该立即生效吗？",
       "assertions": [
-        "技能移到直接条目位置 <skills-home>/release-notes/SKILL.md",
-        "frontmatter 补上非空 description",
-        "最终回复同时提到嵌套目录不支持与缺 description 被过滤"
+        "明确不是所有普通 Config 字段都可热更新",
+        "区分 volatile Config 字段和普通 Cordis patch 配置",
+        "解释 ctx.settings API 按 profile entry id 操作并有 revision 语义"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "skill-discovery",
+      "prompt": "我创建的 DSH skill 放在多层嵌套目录，模型找不到它。",
+      "assertions": [
+        "区分 ctx.skills provider registry 与本地 filesystem provider",
+        "本地 provider 只扫描 root 直接子项中的 <name>/SKILL.md 或 <name>.md",
+        "检查必填 name 和 description 以及 frontmatter 布尔字段"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "skill-body-refresh",
+      "prompt": "我只修改了现有技能的 SKILL.md 正文，是否需要清空缓存或重启？",
+      "assertions": [
+        "说明 local filesystem provider 每次 get 都重新读取正文",
+        "区分 catalog/frontmatter 变化与 skill bundle resource 子目录变化",
+        "不要建议无依据地重启整个 DSH"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "mcp-current-defaults",
+      "prompt": "配置一个 DSH MCP server。toolCallTimeoutMs 和 failOnStartupError 当前默认值是什么？",
+      "assertions": [
+        "对照当前版本 MCP client README/config catalog/source",
+        "当前上游默认 timeout 为 60000 ms",
+        "当前上游 failOnStartupError 默认 false，不得误写为 true"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "mcp-scope-and-transport",
+      "prompt": "两个 Agent scope 要连接同名 MCP server，能否共用 serverName？remote 是 transport 吗？",
+      "assertions": [
+        "当前 transport 为 stdio 或 streamable-http",
+        "serverName pattern 为 [A-Za-z0-9_-]{1,32}",
+        "唯一性按注册 scope 管理，独立 Agent scopes 可以复用 namespace"
       ]
     }
   ]
