@@ -99,6 +99,8 @@ aside h3{font-size:13px;color:#8ecff7;text-transform:uppercase;letter-spacing:1p
   let curCat = "ALL";
   let curSearch = "";
   let currentDetailId = "";
+  // Keep pending IDs across list re-renders to avoid duplicate spawn requests.
+  const pendingRequests = new Map();
 
   function text(value) {
     if (value === null || value === undefined) return "";
@@ -211,9 +213,12 @@ aside h3{font-size:13px;color:#8ecff7;text-transform:uppercase;letter-spacing:1p
 
       const actionRow = makeNode("div");
       actionRow.style.marginTop = "10px";
-      const spawnButton = makeNode("button", "spawn-btn", "生成 ×1");
+      const pendingRequestId = pendingRequests.get(id);
+      const spawnButton = makeNode("button", "spawn-btn",
+        pendingRequestId ? "仍在处理中 · 点击查询" : "生成 ×1");
       spawnButton.type = "button";
       spawnButton.dataset.itemId = id;
+      if (pendingRequestId) spawnButton.dataset.requestId = pendingRequestId;
       spawnButton.addEventListener("click", event => {
         event.stopPropagation();
         spawnItem(id, spawnButton);
@@ -306,22 +311,37 @@ aside h3{font-size:13px;color:#8ecff7;text-transform:uppercase;letter-spacing:1p
     if (button.disabled) return;
     button.disabled = true;
     button.className = "spawn-btn";
-    button.textContent = "发送请求...";
+
+    let requestId = pendingRequests.get(id) || button.dataset.requestId || "";
+    let resetAfterCompletion = true;
     try {
-      if (!(await checkServer())) throw new Error("服务器离线");
-      const accepted = await fetchJson(API + "/api/spawn?itemId=" + encodeURIComponent(id) + "&count=1");
-      if (!accepted.requestId || !["queued", "processing", "succeeded"].includes(accepted.state)) {
-        throw new Error("服务器未确认请求入队");
+      if (!requestId) {
+        if (!(await checkServer())) throw new Error("服务器离线");
+        const accepted = await fetchJson(API + "/api/spawn?itemId=" + encodeURIComponent(id) + "&count=1");
+        if (!accepted.requestId || !["queued", "processing", "succeeded"].includes(accepted.state)) {
+          throw new Error("服务器未确认请求入队");
+        }
+        requestId = accepted.requestId;
+        pendingRequests.set(id, requestId);
+        button.dataset.requestId = requestId;
+        button.textContent = "已入队，等待处理...";
+        notify("请求已接收并入队；正在等待主线程处理。", "");
+      } else {
+        button.dataset.requestId = requestId;
+        button.textContent = "查询已有请求...";
       }
-      button.textContent = "已入队，等待处理...";
-      notify("请求已接收并入队；正在等待主线程处理。", "");
-      const result = await waitForCompletion(accepted.requestId, button);
+
+      const result = await waitForCompletion(requestId, button);
       if (!result) {
         button.className = "spawn-btn";
-        button.textContent = "仍在处理中";
-        notify("请求仍在队列或处理中，尚未确认生成结果。请求 ID: " + accepted.requestId, "");
+        button.textContent = "仍在处理中 · 点击查询";
+        notify("请求仍在队列或处理中，尚未确认生成结果。再次点击可查询原请求，不会重复入队。", "");
+        resetAfterCompletion = false;
         return;
       }
+
+      pendingRequests.delete(id);
+      delete button.dataset.requestId;
       if (result.state === "succeeded" && result.mode === "mock") {
         button.className = "spawn-btn done";
         button.textContent = "Mock 模拟完成";
@@ -337,15 +357,30 @@ aside h3{font-size:13px;color:#8ecff7;text-transform:uppercase;letter-spacing:1p
           (result.err ? "；" + result.err : ""), "bad");
       }
     } catch (error) {
-      button.className = "spawn-btn err";
-      button.textContent = "请求失败";
-      notify("生成请求失败: " + text(error && error.message || error), "bad");
-    } finally {
-      window.setTimeout(() => {
+      if (requestId) {
+        // The server may have accepted the request even if polling failed.
+        // Preserve its ID and never silently enqueue a duplicate.
+        pendingRequests.set(id, requestId);
+        button.dataset.requestId = requestId;
         button.className = "spawn-btn";
-        button.textContent = "生成 ×1";
+        button.textContent = "状态未知 · 点击查询";
+        notify("无法确认请求状态；请再次点击查询原请求，勿重复提交。请求 ID: " + requestId, "bad");
+        resetAfterCompletion = false;
+      } else {
+        button.className = "spawn-btn err";
+        button.textContent = "请求失败";
+        notify("生成请求失败: " + text(error && error.message || error), "bad");
+      }
+    } finally {
+      if (resetAfterCompletion) {
+        window.setTimeout(() => {
+          button.className = "spawn-btn";
+          button.textContent = "生成 ×1";
+          button.disabled = false;
+        }, 3200);
+      } else {
         button.disabled = false;
-      }, 3200);
+      }
     }
   }
 
