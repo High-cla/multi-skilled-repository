@@ -110,6 +110,23 @@ class MockServerHttpTests(unittest.TestCase):
         self.assertEqual(request["state"], "rejected")
         self.assertEqual(request["err"], "mock queue is full")
 
+    def test_worker_only_observes_already_queued_state(self):
+        observed = {}
+
+        class InspectQueue(queue.Queue):
+            def put_nowait(self, request):
+                observed["state_at_enqueue"] = request["state"]
+                super().put_nowait(request)
+
+        runtime = MockRuntime.__new__(MockRuntime)
+        runtime.pending = InspectQueue(maxsize=1)
+        runtime.statuses = OrderedDict()
+        runtime.lock = threading.Lock()
+        request, status = runtime.enqueue("monotonic.item", 1)
+        self.assertEqual(status, 202)
+        self.assertEqual(observed["state_at_enqueue"], "queued")
+        self.assertEqual(request["state"], "queued")
+
 
 if __name__ == "__main__":
     unittest.main()
