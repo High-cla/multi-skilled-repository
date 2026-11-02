@@ -23,12 +23,12 @@ description: "Windows CMD 和 PowerShell 错误排查与陷阱规避指南，含
 ```batch
 REM 错误
 for %%f in (*.lua) do (
-  echo addappid(%%a, 1)    REM 这里的 ) 被当作 for 体结束
+  echo addappid(%%f, 1)    REM 这里的 ) 被当作 for 体结束
 )
 
 REM 正确
 for %%f in (*.lua) do (
-  echo addappid(%%a, 1^)   REM ^) 将 ) 转义为字面字符
+  echo addappid(%%f, 1^)   REM ^) 将 ) 转义为字面字符
 )
 ```
 
@@ -195,20 +195,28 @@ if errorlevel 1 (
 
 ## 15. 逐 `>>` 追加 vs 一次性重定向
 
+每次循环都执行 `>> out.txt` 会反复打开/追加/关闭文件。将整个命令组重定向为 `> out.txt` 可让 CMD 对整组命令只建立一次重定向。
+
 ```batch
-REM 快：整个 for 输出一次重定向
+REM 整个 for 输出一次重定向
 (
   for %%f in (*.lua) do echo %%f
 ) > out.txt
 ```
 
-## 16. .NET API 加速 PowerShell
+这只是减少重复打开操作的常见写法；真实收益取决于文件系统、缓冲和输出量，应按 workload 测量。
 
-| 慢 (cmdlet) | 快 (.NET 直调) |
-|---|---|
-| `Get-ChildItem *.lua` | `[IO.Directory]::GetFiles($dir, '*.lua')` |
-| `Get-Content file.txt` | `[IO.File]::ReadAllLines($path)` |
-| `Set-Content path txt` | `[IO.File]::WriteAllText($path, $text)` |
+## 16. 比较 PowerShell cmdlet 与 .NET API
+
+直接调用 .NET API 可以减少部分 PowerShell 对象管线和 cmdlet 开销，但**不能普遍断言更快或更省内存**；还要比较是否物化完整结果、编码、异常语义和资源释放。
+
+| 需求 | 可比较的实现 | 需要注意 |
+|---|---|---|
+| 枚举文件 | `Get-ChildItem -File` / `[IO.Directory]::EnumerateFiles()` | `EnumerateFiles()` 惰性枚举；`GetFiles()` 一次性返回数组 |
+| 逐行读取 | `Get-Content` / `[IO.File]::ReadLines()` | `ReadAllLines()` 会把全部行加载到内存；大文件优先流式处理 |
+| 写入已存在的字符串 | `Set-Content` / `[IO.File]::WriteAllText()` | 显式指定编码；超大内容用流式 writer，不要先构造重复的大字符串 |
+
+选择前确认 PowerShell 版本和目标编码，在代表性输入上 benchmark，并测量峰值内存；小文件/少量对象时差异可能不值得牺牲可读性。
 
 ## 17. 退出码检测
 
@@ -325,7 +333,7 @@ WHERE id=1
 
 ## 29. 临时文件竞争条件
 
-并发场景下必须用唯一标识 (GUID/PID/时间戳)。
+并发场景应使用系统临时目录、GUID 或具备原子 `CreateNew` 语义的 API 创建临时文件。PID/时间戳可以参与命名，但单独使用不能保证跨进程/跨重启唯一；不要采用“先检查文件不存在，再普通创建”的非原子流程。任务完成后在 `finally` 中清理，保留文件时需明确所有权和生命周期。
 
 
 ## 30. 权限提升与 UAC
@@ -376,7 +384,9 @@ Windows 长路径支持不是只改一个注册表值就能让所有程序都支
 
 ## 35. 配置文件读取
 
-复杂配置用 JSON/YAML，通过 PowerShell 解析；简单配置用环境变量。
+- JSON 可使用 PowerShell 内置的 `ConvertFrom-Json` / `ConvertTo-Json`，但需核验目标 PowerShell 版本对深度、日期、数值和大整数的处理。
+- YAML 不是 Windows PowerShell / PowerShell 7 的通用内置解析器；使用已安装且版本确认的模块，或优先使用 Mike Farah `yq`。不要假设 `ConvertFrom-Yaml` 在干净环境中存在。
+- 简单部署参数优先使用环境变量；复杂/需要类型验证的配置应使用正式解析器和 schema，而不是正则/字符串切割。
 
 
 ## Git Bash 与 MSYS2 路径转换
@@ -388,9 +398,9 @@ MSYS2 runtime 会把看起来像 POSIX 路径的参数/环境变量转换为 Win
 - 优先排除最窄的选项前缀，不要全局禁用所有参数转换，除非已确认该命令所有参数都不需要 MSYS 路径转换。
 - 不把 `//` 当作跨工具通用的绕过方案；实际转换规则以 Git for Windows/MSYS2 版本文档为准。
 
-## 重复安装
+## 多来源重复安装
 
-opencode 同时通过 npm 和 WinGet 安装时，PATH 顺序决定生效版本。当前仅保留 npm 版。
+同一 CLI 可能通过 npm、WinGet、Scoop、Cargo 或系统包管理器重复安装；PATH 顺序和 shell 命令解析规则决定实际执行哪一个。使用 `where.exe`、PowerShell `Get-Command -All` 或 Bash `command -v` / `type -a` 检查所有解析结果，再对实际路径查询版本。不要在未确认调用链前自动删除任何一份安装。
 
 
 ## 检查清单
