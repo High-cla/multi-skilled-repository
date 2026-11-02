@@ -3,10 +3,10 @@ name: cli-first-decision
 description: "多步骤任务的工具选择、执行编排与成本优化协议。适用于本地文件读写、全文与结构搜索、批量处理、符号与调用链分析、API 调试、并行执行、子智能体委派和工具选型。触发词：用哪个工具、怎么执行、先做什么、能否并行、能否合并、批量操作、代码搜索、调用链、影响面、任务委派。"
 metadata:
   author: High-cla
-  version: "3.6"
+  version: "3.7"
 ---
 
-# CLI-First Decision 3.6
+# CLI-First Decision 3.7
 
 ## 1. 目标与原则
 
