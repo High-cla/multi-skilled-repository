@@ -660,6 +660,26 @@
         "Remember DSH may cancel and drain still-running bindings after an outer program failure",
         "Do not assume prior side effects are rolled back"
       ]
+    },
+    {
+      "id": "E73",
+      "input": "Optimize a PowerShell file-processing script and choose between cmdlets and .NET APIs.",
+      "expected": [
+        "Do not assume .NET APIs are always faster or more memory-efficient than cmdlets",
+        "Compare lazy enumeration/streaming with array or string materialization",
+        "Measure representative runtime and peak memory before selecting the lower-level implementation",
+        "Preserve encoding, error, cancellation and cleanup semantics"
+      ]
+    },
+    {
+      "id": "E74",
+      "input": "Read YAML configuration in a clean PowerShell 5.1 or PowerShell 7 environment.",
+      "expected": [
+        "Use ConvertFrom-Json only for JSON data",
+        "Do not assume YAML parsing is built into PowerShell",
+        "Check for an installed YAML module or use a version-verified yq executable",
+        "Validate configuration shape and types at the boundary"
+      ]
     }
   ]
 }
