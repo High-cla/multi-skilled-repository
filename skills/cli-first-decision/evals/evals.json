@@ -1,7 +1,7 @@
 {
   "skill": "cli-first-decision",
-  "version": "3.5",
-  "description": "Regression cases for CLI/DSH routing, PTC SDK and runtime contracts, FastCtx versioned MCP behavior, official CLI documentation, programming quality, and speed/memory optimization.",
+  "version": "3.6",
+  "description": "Regression cases for DSH PTC contracts, FastCtx versioned MCP behavior, Context7 documentation retrieval, official CLI manuals, programming quality, and speed/memory optimization.",
   "cases": [
     {
       "id": "E01",
@@ -529,6 +529,55 @@
         "Recognize --slurp materializes the entire input into one array and may greatly increase memory",
         "Measure peak memory and avoid unnecessary intermediate materialization",
         "Validate output correctness and exit status"
+      ]
+    },
+    {
+      "id": "E60",
+      "input": "Research a third-party library's current API using Context7 in an environment where Context7 tools are available.",
+      "expected": [
+        "Call resolve_library_id before query_docs unless the exact Context7 library ID was supplied",
+        "Choose the matching library and version using project lockfiles and result reputation/coverage",
+        "Query one concrete topic at a time",
+        "Verify consequential API and version claims against the official original documentation or source"
+      ]
+    },
+    {
+      "id": "E61",
+      "input": "The local DSH workstation does not have Context7 installed, but a task needs current library documentation.",
+      "expected": [
+        "Do not claim Context7 is installed or require the user to install it",
+        "Use available official documentation, release notes and source repositories instead",
+        "Keep Context7 as an optional retrieval method, not a local runtime dependency"
+      ]
+    },
+    {
+      "id": "E62",
+      "input": "A FastCtx installation may use either the stable MCP release or a new major-version beta.",
+      "expected": [
+        "Check fastctx --version and identify the actual binary/source",
+        "Distinguish v0.2.6 stable MCP documentation from the v1.0.1-beta.13 World rebuild pre-release",
+        "Use the matching tag/release and tool schema rather than mixing behavior between major generations",
+        "Verify glob/replace/Bash and job semantics against the installed build"
+      ]
+    },
+    {
+      "id": "E63",
+      "input": "Optimize memory use inside a DSH PTC program that invokes tools returning large intermediate objects.",
+      "expected": [
+        "Recognize PTC intermediate binding values are execution-local and have no byte-size cap in the PTC executor contract",
+        "Do not mistake Node maxMessageBytes or maxOldGenerationSizeMb for a total cap on intermediate result objects or process RSS",
+        "Bound, filter, stream, aggregate and release large values within the program",
+        "Distinguish outer maxOutputBytes from internal binding values"
+      ]
+    },
+    {
+      "id": "E64",
+      "input": "Select a DSH PTC execution mode and configure its safety and resource limits.",
+      "expected": [
+        "Distinguish per-call, vm-script with optional scriptPersistence, and persistent-in-memory modes",
+        "Check provider-specific timeout, output, V8 old-generation heap, control-message and pending-call defaults",
+        "Verify sandbox enforcement facts; language/isolation descriptors alone do not prove confinement",
+        "Treat Python provider as an explicit experimental runtime with different sandbox capability, not as equivalent to Node"
       ]
     }
   ]
