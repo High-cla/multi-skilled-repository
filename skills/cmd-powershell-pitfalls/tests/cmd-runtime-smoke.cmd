@@ -9,7 +9,7 @@ REM A right parenthesis that would close a parsed block must be escaped.
     echo addappid(123, 1^)
   )
 ) > "%OUT%"
-findstr /x /c:"addappid(123, 1)" "%OUT%" >nul
+findstr /l /x /c:"addappid(123, 1)" "%OUT%" >nul
 if errorlevel 1 (
   del "%OUT%" "%COUNT%" 2>nul
   exit /b 41
@@ -23,7 +23,7 @@ for %%F in (one two) do (
   echo !N!>>"%COUNT%"
 )
 endlocal
-findstr /x /c:"2" "%COUNT%" >nul
+findstr /l /x /c:"2" "%COUNT%" >nul
 if errorlevel 1 (
   del "%OUT%" "%COUNT%" 2>nul
   exit /b 42
@@ -31,7 +31,7 @@ if errorlevel 1 (
 
 REM Literal exclamation marks are preserved while delayed expansion is off.
 > "%OUT%" echo literal!bang
-findstr /x /c:"literal!bang" "%OUT%" >nul
+findstr /l /x /c:"literal!bang" "%OUT%" >nul
 if errorlevel 1 (
   del "%OUT%" "%COUNT%" 2>nul
   exit /b 43
