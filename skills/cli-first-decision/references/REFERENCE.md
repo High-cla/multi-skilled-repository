@@ -197,9 +197,9 @@ return contents.map((content, index) => ({
 
 ### 9.4 结果、内存与输出
 
-- PTC 子调用中间结果只存在于执行局部，不进入 Session 历史/回放；官方 PTC executor 明确指出中间 binding 值没有字节数上限，可能耗尽进程/worker 内存。
+- PTC 子调用的 canonical binding 对象只存在于执行环境，不能从 Session replay 还原，且没有字节数上限；但 DSH 会把 `tool/ptc-dispatch-start` / `tool/ptc-dispatch` 事件作为 log-only 事件持久化，其中包含工具名、规范化参数和渲染后的结果/错误，供审计与 UI 使用，不重新进入模型 transcript。
 - 大文件/大响应应在程序内筛选、流式或分块处理、汇总必要字段；及时解除不再使用的引用，避免把所有完整结果保存在数组中。注意：PTC executor 明确说明中间 binding 值没有字节数上限；Node 的 `maxMessageBytes` 只约束控制消息、待处理 binding 参数字节和控制写队列，`maxOutputBytes` 才约束外层 logs/完成值/诊断。`maxOldGenerationSizeMb` 也不是全进程 RSS 上限。
-- 只有外层 `run_code` 的返回值/log 输出进入模型上下文（图片等附加上下文按 DSH 当前契约处理）。外层输出仍受大小限制；只返回模型决策所需信息。
+- 通常只有外层 `run_code` 的返回值/log 进入模型上下文；成功的图像子调用可按 DSH 当前契约作为延迟附加上下文。PTC 子调用的 log-only 事件持久化但不重新进入模型 transcript。外层输出受 Node provider 输出预算限制；只返回模型决策所需信息。
 - 控制输出体积不等于控制程序内存。程序内部仍需显式设定数据规模和缓存上限。
 
 ### 9.5 超时、安全与副作用
