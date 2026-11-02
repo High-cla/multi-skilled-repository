@@ -36,6 +36,8 @@
 ### Agent preset 与 Cordis 插件
 
 - [Agent preset package README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/preset/agent-preset/README.zh.md) — Cordis YAML 中定义 Agent 子插件列表；不要与其他基于目录的 preset 功能混为一谈。
+- [Agent preset registry README](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/preset/agent-preset-registry/README.md) — preset registry 与 session 选择的接口边界。
+- 旧式 `$DSH_HOME/.agent-presets/<id>/`（`preset.yml` + `agent.cordis.yml`）已不再被当前上游读取；不要继续把它当作可生效配置目录。迁移说明见 [editing-cordis-compositions skill](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/preset/agent-preset/skills/editing-cordis-compositions/SKILL.md)。
 - [Cordis primer（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/cordis-primer.zh.md) — plugin、service、scope、lifecycle 基础。
 - [Cordis API catalog](https://github.com/deepseek-ai/deepseek-harness/tree/master/docs/cordis-api) — API 具体签名与事件。
 
