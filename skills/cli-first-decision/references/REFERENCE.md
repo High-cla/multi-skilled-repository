@@ -1,4 +1,4 @@
-# CLI-First Decision 3.6 — Reference
+# CLI-First Decision 3.7 — Reference
 
 本参考表以 DSH 环境提供的信息为基准。工具调用前仍需确认当前注册状态和参数 schema；未注册的可选工具不得假设存在。
 
@@ -199,7 +199,7 @@ return contents.map((content, index) => ({
 
 - PTC 子调用的 canonical binding 对象只存在于执行环境，不能从 Session replay 还原，且没有字节数上限；但 DSH 会把 `tool/ptc-dispatch-start` / `tool/ptc-dispatch` 事件作为 log-only 事件持久化，其中包含工具名、规范化参数和渲染后的结果/错误，供审计与 UI 使用，不重新进入模型 transcript。
 - 大文件/大响应应在程序内筛选、流式或分块处理、汇总必要字段；及时解除不再使用的引用，避免把所有完整结果保存在数组中。注意：PTC executor 明确说明中间 binding 值没有字节数上限；Node 的 `maxMessageBytes` 只约束控制消息、待处理 binding 参数字节和控制写队列，`maxOutputBytes` 才约束外层 logs/完成值/诊断。`maxOldGenerationSizeMb` 也不是全进程 RSS 上限。
-- 通常只有外层 `run_code` 的返回值/log 进入模型上下文；成功的图像子调用可按 DSH 当前契约作为延迟附加上下文。PTC 子调用的 log-only 事件持久化但不重新进入模型 transcript。外层输出受 Node provider 输出预算限制；只返回模型决策所需信息。
+- 通常只有外层 `run_code` 的返回值/log 进入模型上下文；成功的图像子调用及工具 `additionalContexts` 也可能由 dispatcher 独立转发，须把它们计入上下文预算。PTC 子调用的 log-only 事件持久化但不重新进入模型 transcript。外层输出受 Node provider 输出预算限制；只返回模型决策所需信息。
 - 控制输出体积不等于控制程序内存。程序内部仍需显式设定数据规模和缓存上限。
 
 ### 9.5 超时、安全与副作用
@@ -209,7 +209,7 @@ return contents.map((content, index) => ({
 - Runtime 的 isolation/substrate 描述不能单独证明 OS 级安全隔离。检查当前 PTC provider、实际 sandbox mode 和执行结果报告的 enforcement facts；按 DSH sandbox policy 操作，不通过 Node API 或子进程绕过宿主权限。
 - 对于取消和失败，区分外层代码异常、超时/取消、SDK 子工具错误和 sandbox 拒绝。工具定义若要求协作式取消，应观察传入的 signal。
 - SDK 子调用失败可通过 `ToolCallError` 与 `toolName` 识别具体失败工具；外层程序失败按当前 runtime 的错误分类处理。
-- 普通文件/网络/提交等副作用不会因为 PTC 程序失败而自动回滚。失败后先核对实际状态，不盲目重试，不假设事务或 exactly-once。
+- `Promise.all` 中任一 binding reject 会使聚合 Promise reject；未捕获时 DSH 会取消并 drain 尚未完成的调用。需要保留成功分支时用 `Promise.allSettled` 或逐项捕获，再决定整体错误处理。普通文件/网络/提交等副作用不会因为 PTC 程序失败而自动回滚。失败后先核对实际状态，不盲目重试，不假设事务或 exactly-once。
 
 ## 10. 验收记录
 
