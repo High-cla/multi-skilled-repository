@@ -127,7 +127,8 @@
       "prompt": "我准备直接编辑 $DSH_HOME/settings.yaml 来修改当前 DSH 的默认模型和权限设置，这样是否是当前推荐方式？",
       "assertions": [
         "说明 settings.yaml 是旧版兼容导入文件，不是当前通用配置数据库",
-        "提到旧文件在 Settings 启动后导入一次并改名为 settings.yaml.imported",
+        "明确 Loader 完成 entry 加载后，文件在首次写入前即重命名为 settings.yaml.imported，随后才逐 section 写入",
+        "说明 active composition 拒绝的 section 会记录日志并仅保留在 settings.yaml.imported；重命名不代表全部导入成功，也不会自动重试",
         "普通插件 Config 通过 Cordis patch，volatile 字段通过 Settings 表单/API 编辑",
         "不得声称所有 settings.yaml 改动会自动热发布"
       ]
@@ -141,6 +142,19 @@
         "未显式指定 preset 的新会话优先采用用户 selectedDefault",
         "指出 modeSelectionEnabled 是已废弃字段，registry 不读取也不重写",
         "已有 Agent/session 不会因默认值更新而自动换 preset"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "settings-yaml-partial-import-recovery",
+      "prompt": "旧版 settings.yaml 导入后，默认模型已更新，但某个旧 section 没生效；文件现在叫 settings.yaml.imported。能否据此认为迁移完成？如何安全恢复遗漏的设置？",
+      "assertions": [
+        "先说明文件在首次写入前就重命名，随后才逐 section 导入，重命名本身不是成功标记",
+        "指出当前 profile 拒绝的 section 会记录日志并仅保留在 settings.yaml.imported，且不会自动重试",
+        "举例说明一个 section 可成功导入、另一个不受支持或目标 entry 缺失的 section 被拒绝，形成部分导入",
+        "建议备份并检查启动日志、settings.yaml.imported 和当前 profile 配置",
+        "按当前 entry id 与安装版本 Config schema 逐项映射；普通 Config 走 Cordis patch，volatile 字段走 Settings API/UI",
+        "不要将整个 settings.yaml.imported 盲目覆盖现有配置，也不要默认改回 settings.yaml 重启"
       ]
     }
   ]
