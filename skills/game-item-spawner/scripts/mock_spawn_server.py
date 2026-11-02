@@ -101,10 +101,20 @@ class MockRuntime:
 class Handler(BaseHTTPRequestHandler):
     runtime = None
 
+    def _origin_allowed(self):
+        origin = self.headers.get("Origin")
+        return not origin or origin in self.server.allowed_origins
+
     def do_OPTIONS(self):
+        if not self._origin_allowed():
+            self._send(403, {"ok": False, "state": "rejected", "err": "origin not allowed"})
+            return
         self._send(204, None)
 
     def do_GET(self):
+        if not self._origin_allowed():
+            self._send(403, {"ok": False, "state": "rejected", "err": "origin not allowed"})
+            return
         parsed = urlsplit(self.path)
         query = parse_qs(parsed.query, keep_blank_values=True)
 
@@ -145,7 +155,10 @@ class Handler(BaseHTTPRequestHandler):
         body = b"" if payload is None else json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", "*")
+        origin = self.headers.get("Origin")
+        if origin and origin in self.server.allowed_origins:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.send_header("Content-Length", str(len(body)))
@@ -160,6 +173,11 @@ class Handler(BaseHTTPRequestHandler):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=26880)
+    parser.add_argument(
+        "--allow-origin", action="append", default=[],
+        help="exact browser origin to allow; repeat for multiple origins "
+             "(default: http://localhost:8090 and http://127.0.0.1:8090)",
+    )
     args = parser.parse_args(argv)
     if not 1 <= args.port <= 65535:
         parser.error("--port must be between 1 and 65535")
@@ -167,6 +185,9 @@ def main(argv=None):
     runtime = MockRuntime()
     handler = type("BoundHandler", (Handler,), {"runtime": runtime})
     server = ThreadingHTTPServer(("localhost", args.port), handler)
+    server.allowed_origins = set(args.allow_origin or [
+        "http://localhost:8090", "http://127.0.0.1:8090"
+    ])
     server.daemon_threads = True
     print(f"[mock] listening on http://127.0.0.1:{args.port}/ (queue capacity: {QUEUE_CAPACITY})")
     print("[mock] status: /api/spawn returns queued; /api/spawn/status reports mock completion")
