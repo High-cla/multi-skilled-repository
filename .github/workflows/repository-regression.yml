@@ -1,0 +1,60 @@
+name: Repository regression
+
+on:
+  push:
+    branches:
+      - main
+      - fix/item-spawner-reliability-and-skill-consistency
+  pull_request:
+
+jobs:
+  python-ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Python scripts
+        run: |
+          python -m py_compile skills/game-item-spawner/scripts/extract_catalog.py
+          python -m py_compile skills/game-item-spawner/scripts/json_to_js.py
+          python -m py_compile skills/game-item-spawner/scripts/mock_spawn_server.py
+      - name: Run game item spawner tests
+        run: python -m unittest discover -s skills/game-item-spawner/tests -v
+
+  python-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile and test Python tooling
+        shell: pwsh
+        run: |
+          python -m py_compile skills/game-item-spawner/scripts/extract_catalog.py
+          python -m py_compile skills/game-item-spawner/scripts/json_to_js.py
+          python -m py_compile skills/game-item-spawner/scripts/mock_spawn_server.py
+          python -m unittest discover -s skills/game-item-spawner/tests -v
+
+  windows-shell-regression:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: CMD parser, delayed expansion, literal bang, and exit-code smoke
+        shell: cmd
+        run: call skills\cmd-powershell-pitfalls\tests\cmd-runtime-smoke.cmd
+      - name: Windows PowerShell 5.1 smoke
+        shell: powershell
+        run: .\skills\cmd-powershell-pitfalls\tests\powershell-runtime-smoke.ps1 -ExpectedMajor 5
+      - name: PowerShell 7+ smoke
+        shell: pwsh
+        run: .\skills\cmd-powershell-pitfalls\tests\powershell-runtime-smoke.ps1 -ExpectedMajor 7
+      - name: Compile C# localhost server template (.NET Framework)
+        shell: powershell
+        run: |
+          $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+          if (-not (Test-Path -LiteralPath $compiler)) { throw "Compiler not found: $compiler" }
+          & $compiler /nologo /target:library /r:System.dll /r:System.Core.dll /r:System.Web.dll /out:"$env:RUNNER_TEMP\SpawnServerTemplate.dll" skills\game-item-spawner\scripts\spawn_server.cs
+          if ($LASTEXITCODE -ne 0) { throw "C# compilation failed: $LASTEXITCODE" }
