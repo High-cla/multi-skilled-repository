@@ -37,9 +37,9 @@
 - SDK 语言取决于加载的 `ctx.ptcRuntime.language` 和已注册 renderer。`dsh-tools` 当前包含 TypeScript 与 Python SDK renderer；已发布 Node provider 执行 TypeScript，Python provider 位于实验性 package，需显式组合。PTC presentation 按 Agent 统一，不能在同一 Agent 内假设不同工具分别使用 Native/PTC；不能把某次会话的 TS 声明当成所有 PTC preset 的永久约定。
 - 当前 `@deepseek-ai/dsh-tool-executor-ptc` 文档给出的 `maxParallelSubCalls` 默认值为 10；设为 1 可串行执行，必须为正整数。根 `run_code` 调用本身是 exclusive；该值限制每个程序内部并行安全的嵌套调用数。它是该 DSH 版本的配置默认值，不应硬编码成所有运行时的固定上限。
 - `Promise.all` 只表达程序端的并发意图。工具定义的参数敏感 parallel/exclusive 分类和执行 scheduler 决定是否真正重叠；未知工具 fail-closed 为 exclusive。连续 parallel calls 可组成有界 pool，exclusive 调用形成单独屏障；不支持按兄弟调用之间资源冲突作关系型判断，因此可能冲突的写入应串行化。工具主体必须遵守 `exec.signal` 合作式取消；中止后等待已启动工作清理，但不会撤销已经完成的副作用。
-- PTC 中间绑定结果只存在于执行局部，不进入 Session 历史/回放；官方 PTC executor 文档明确指出这些值没有字节数上限，可能耗尽进程/worker 内存。外层 `run_code` 的返回值/log 才受 provider 输出预算约束。`maxMessageBytes` 是 Node provider 控制消息、未完成 binding 参数字节与排队控制写入的限制，不能误读为中间工具返回对象图的总内存上限。只取需要字段、分块/流式处理并及时释放大结果。
+- PTC 程序内的 canonical binding 对象值只存在于本次执行环境，不能从 Session replay 还原，且没有字节数上限；但这**不代表子调用不留审计记录**。DSH 会持久化 `tool/ptc-dispatch-start` 与 `tool/ptc-dispatch` log-only 事件：包含工具名、JSON-normalized 参数，以及渲染后的结果内容、`isError`、可选 presentation metadata 和结构化错误；这些事件不重新注入模型 transcript。外层 `run_code` 程序和可见结果也按 Session 事件规则记录。参见 [PTC dispatch event types](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/core/tool-executor-ptc/src/types.ts) 与 [Session persistence catalog](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/persistence-catalog.zh.md)。中间 binding 值仍没有字节数上限，可能耗尽进程/worker 内存。`maxMessageBytes` 约束控制消息、待处理 binding 参数字节和排队控制写入，不是中间返回对象图总内存上限；`maxOutputBytes` 约束 Node provider 序列化 logs 与完成值/诊断预算。只取需要字段、分块/流式处理并及时释放大结果。
 - 当前 Node runtime 的 `timeoutMs` 默认 120,000 ms、上限 600,000 ms，并纳入嵌套工具与审批等待；它是经过时间 deadline，不是 CPU 时间计量。
-- 当前 Node provider README 还列出 `executionMode: per-call`（默认，每次新 Node 进程）、可选 `persistent-in-memory`（每个 Agent 保留受限 REPL）、`maxOldGenerationSizeMb: 512`、`maxOutputBytes: 64 MiB`、`maxMessageBytes: 128 MiB` 等配置默认值。这些都是该 provider 版本的配置，不能当作 PTC SDK 的通用内存上限；尤其中间对象仍应主动限量。
+- 当前 Node provider 有三种 `executionMode`：`per-call`（默认，每次使用新进程执行 async function body）；`vm-script`（通过 `node:vm` Script 执行，默认 `scriptPersistence: false`，设为 `true` 才按 owner 保留上下文）；`persistent-in-memory`（按 Agent/owner 保留 Node REPL）。Script context 本身不是安全边界；三种模式都服从 provider 选择的文件 sandbox policy。当前 README 示例默认值包括 `timeoutMs: 120000`、`maxTimeoutMs: 600000`、`maxOutputBytes: 67108864`、`maxOldGenerationSizeMb: 512`、`maxMessageBytes: 134217728`、`maxPendingCalls: 128`。其中 maxOutputBytes 是序列化 logs + completion/diagnostic 的预算；maxOldGenerationSizeMb 只限 V8 old-generation heap；maxMessageBytes 限制单条控制消息、未完成 binding 参数字节和控制写队列。它们均是 Node provider 特定配置，不是 PTC SDK 通用限制，也不能当作全进程 RSS 或任意中间对象图的总内存上限。
 - 请求更宽的 `sandbox_permissions` 时需要 `justification` 和审批。要检查 provider 实际报告的 sandbox enforcement/facts；不能把 `isolation` 一词当成 OS 级安全保证，也不能把 sandbox policy 扩权理解为永久授权。
 - 子调用失败按真实错误对象处理（例如 `ToolCallError` 的 `toolName`）；外层程序异常与工具调用异常需要区分。执行失败不自动回滚此前副作用，不自动重放非幂等调用；重试前核对实际状态。
 
@@ -80,10 +80,11 @@ FastCtx 官方 README 当前列出九个同级 MCP 工具：
 
 适用边界：
 
-- `inspect_local_file` 批量文本读取支持 1–32 个文件；`grep`/`glob` 自动并行默认按 OS 可用并行度工作、最高 16；这是 FastCtx v0.2.6 搜索请求的有效并行度，不是 CPU affinity 或整机 governor。
-- v0.2.6 `replace` 默认最大输入/替换结果文件大小 256 MiB，可配置为 64 MiB–4 GiB；提高上限会增加内存耗尽风险。
-- `run` 使用有界内存缓冲，超出输出预算会截断；大日志应重定向到文件再分页读取。
-- `run_background` 没有运行超时，由独立监督进程管理；任务输出/状态保存在用户私有目录，server/session 退出后仍可用 job id 查询。需要自行设置停止和存储配额策略。
+- `inspect_local_file` 的批量文本读取支持 1–32 个文件；`grep`/`glob` 的搜索并行度默认使用 OS 报告的可用并行度、上限 16。它限制单个搜索请求的有效 worker 数，不是 CPU affinity 或整机 governor。
+- **不要混淆 `grep` 与 `glob` 的过滤规则**：v0.2.6 `grep` 默认尊重 `.gitignore` 与 `.ignore`，会搜索隐藏文件，但排除 `.git` 和二进制文件；`glob` 的 `filter_mode: "ignore"` 只尊重普通 `.ignore`，隐藏文件和 `.git` 都可见，且不会读取 `.gitignore`、`.git/info/exclude` 或 global Git ignore。`glob` 要排除这些目录时必须显式使用负 pattern。
+- v0.2.6 `replace` 默认最大输入文件/替换结果大小为 256 MiB，可配置为 64 MiB–4 GiB；候选文件数有 10,000 上限。提升文件上限会增加内存耗尽风险；写入前先 dry-run，实际写入仍会重新校验候选文件版本。
+- `run` 在无 TTY 的 Bash 环境中执行，默认 timeout 为 120,000 ms、上限 240,000 ms；输出超出预算会截断。需要完整日志时重定向到文件并用 `inspect_local_file` 分页读取。
+- `run_background` 无 timeout，由独立监督进程管理；任务存活不依赖 MCP server/session。v0.2.6 将任务输出追加到持久日志文件，不使用 8 MiB 环形缓冲；`job_output` 只窗口化展示最近输出和首段，并报告跳过的行区间，完整日志可用返回路径读取。终态记录没有 TTL，超出用户存储配额时才从最旧终态开始回收；默认存储配额 1,024 MiB，运行中任务不会被回收。
 - 文件工具默认发布；Bash/job 工具是否可见取决于 FastCtx 的 Bash terminal 设置及宿主配置，不能假设每台机器都已启用。
 - 官方 README 说明 FastCtx server 继承宿主进程本地权限。MCP server 的文件权限边界不应被误认为宿主应用自身 sandbox 的边界。
 - `replace` 的 dry-run、候选集冻结、原子替换、CAS 校验、编码/BOM/行尾保留等语义，以已安装版本的 schema/实现为准。
@@ -111,7 +112,7 @@ Context7 是可选的文档检索工具，**不是 DSH 本地运行时依赖，�
 - ripgrep：`/burntsushi/ripgrep` — 上游源码与指南。
 - GNU Bash：`/websites/gnu_software_bash_manual_html_node` — GNU Bash 手册索引。
 
-本次 Context7 交叉核实的具体行为：jq `--slurp` 会把所有输入读入内存；jq 1.5+ 可使用 `inputs` 逐实体处理，`--stream` 可处理超大 JSON 但 filter 更复杂且可能较慢；ripgrep 默认忽略 `.gitignore`/`.ignore`/`.rgignore`（优先级 `.rgignore` > `.ignore` > `.gitignore`）、隐藏/二进制文件并不跟随 symlink；Bash pipeline 默认退出码是最后一个命令的退出码，启用 `set -o pipefail` 后才会传播最右侧失败状态。实际行为仍应按本机版本复核。
+Context7 检索到的 jq/ripgrep/Bash 行为须按目标版本复核：jq `--slurp` 会把所有输入聚合为数组；对 JSONL/多个顶层 JSON 值使用 `inputs` 时加 `-n`，例如 `jq -n 'inputs | select(.level == "error")' events.jsonl`，否则 jq 的隐式首个输入可能先被消费。单个超大 JSON 文档则评估 `--stream`，不要把 `inputs` 当作等价替代。ripgrep 默认读取 `.rgignore`、`.ignore`、`.gitignore` 过滤规则，忽略隐藏文件和二进制文件，默认不跟随 symlink；规则优先级以当前官方 GUIDE 和安装版本为准。Bash pipeline 默认状态是最后一条命令的状态，启用 `set -o pipefail` 后为最右侧失败命令的状态。实际行为仍应按本机版本复核。
 
 ## 5. Shell、POSIX 与 Windows Git Bash
 
@@ -119,7 +120,11 @@ Context7 是可选的文档检索工具，**不是 DSH 本地运行时依赖，�
 - [POSIX.1-2024 / The Open Group Base Specifications Issue 8](https://pubs.opengroup.org/onlinepubs/9799919799/) — POSIX Shell Command Language 与标准工具的可移植基线。
 - [Git for Windows Technical Overview](https://gitforwindows.org/technical-overview.html) — Git for Windows 使用 MSYS2 子集并提供 Git Bash。
 - [Git for Windows](https://gitforwindows.org/) — 官方安装、组件与环境入口。
-- [MSYS2 Filesystem Paths](https://www.msys2.org/docs/filesystem-paths/) — Unix/Windows 路径转换、argv/environment 自动转换和 `cygpath`；跨原生 Windows 程序边界时必须注意。
+- [MSYS2 Filesystem Paths](https://www.msys2.org/docs/filesystem-paths/) — Unix/Windows 路径转换、argv/environment 自动转换、`MSYS2_ARG_CONV_EXCL` 的参数前缀排除规则和 `cygpath`；跨原生 Windows 程序边界时必须注意。
+- [PowerShell about_Character_Encoding](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_character_encoding) — Windows PowerShell 5.1 与 PowerShell 7+ 的文件编码、默认值和 `$OutputEncoding`。
+- [PowerShell about_Execution_Policies](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies) · [Set-ExecutionPolicy](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/set-executionpolicy) — policy scope、precedence、Group Policy 覆盖和 Bypass 的安全语义。
+- [Windows setx command](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/setx) — 新进程生效、变量引用展开和 1,024 字符写入上限。
+- [Windows maximum path length](https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation) — 长路径要同时满足系统开关和应用 manifest opt-in；旧工具仍可能受限。
 - [MSYS2 Overview](https://www.msys2.org/wiki/MSYS2-introduction/) — MSYS POSIX 兼容层与 MinGW 原生 Windows 二进制的差别。
 
 在 DSH/FastCtx 里写 Bash 时，需分别核对：调用端 shell、FastCtx 版本、Git Bash/MSYS 版本、目标 CLI 的原生/ MSYS 构建类型。路径转换行为不能只凭字符串外观推断。
@@ -129,7 +134,7 @@ Context7 是可选的文档检索工具，**不是 DSH 本地运行时依赖，�
 | 工具 | 权威文档 / 上游项目 | 使用时特别核验 |
 |---|---|---|
 | `sg` / ast-grep | [CLI Reference](https://ast-grep.github.io/reference/cli) · [源码仓库](https://github.com/ast-grep/ast-grep) | `sg --help`、语言 parser、配置发现、rewrite/test 子命令；结构搜索不要退化成宽泛正则 |
-| `rg` / ripgrep | [User Guide](https://ripgrep.dev/docs/guide/) · [源码仓库](https://github.com/BurntSushi/ripgrep) | ignore 规则、隐藏文件、symlink、glob、编码、`-z` 和预处理行为 |
+| `rg` / ripgrep | [上游 GUIDE.md](https://github.com/BurntSushi/ripgrep/blob/master/GUIDE.md) · [源码仓库](https://github.com/BurntSushi/ripgrep) | ignore 规则、隐藏文件、symlink、glob、编码、`-z` 和预处理行为 |
 | `fd` | [源码与手册](https://github.com/sharkdp/fd) | `fd --help`、ignore/filter 选项、NUL 输出与路径边界 |
 | `sd` | [源码与用法](https://github.com/chmln/sd) | 正则语法、stdin/文件行为、in-place/预览方式；不要把它用于 AST 改写 |
 | `jq` | [jq 1.8 Manual](https://jqlang.org/manual/) | 安装版本手册；注意 `--slurp` 会把全部输入收集成数组，可能显著增加内存 |
