@@ -1,6 +1,6 @@
 # 编程规则与代码质量约定
 
-性能测量/剖析与工程原则的权威参考集中在 [AUTHORITATIVE-SOURCES.md](AUTHORITATIVE-SOURCES.md)。具体 API 以项目锁定的语言/runtime 版本文档为准。
+性能测量/剖析与工程原则的权威参考集中在 [AUTHORITATIVE-SOURCES.md](AUTHORITATIVE-SOURCES.md)。Context7 可用时用于检索库文档并定位相关章节；具体 API 以项目锁定的语言/runtime 版本官方文档为准。
 
 本规范适用于实现新功能、修复 bug、重构和代码审查。目标是让代码足够简单、明确、可测试、可维护，并符合项目现有风格。
 
