@@ -34,25 +34,23 @@ class MockRuntime:
             "mode": "mock",
             "requestId": uuid.uuid4().hex,
             "itemId": item_id,
-            "state": "received",
+            "state": "queued",
             "requested": count,
             "spawned": 0,
             "err": "",
             "simulated": True,
         }
+        # Publish the queued state before the worker can observe the item.
+        # The worker also takes this lock before moving it to processing.
         with self.lock:
             self.statuses[request["requestId"]] = request
-            self._prune_locked()
-        try:
-            self.pending.put_nowait(request)
-        except queue.Full:
-            with self.lock:
+            try:
+                self.pending.put_nowait(request)
+            except queue.Full:
                 request.update(ok=False, state="rejected", err="mock queue is full")
                 self._prune_locked()
-            return request, 429
-
-        with self.lock:
-            request["state"] = "queued"
+                return request, 429
+            self._prune_locked()
         return request, 202
 
     def get_status(self, request_id):
