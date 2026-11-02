@@ -175,8 +175,11 @@ aside h3{font-size:13px;color:#8ecff7;text-transform:uppercase;letter-spacing:1p
     document.getElementById("count").textContent = filtered.length + " 项";
 
     if (!filtered.length) {
-      grid.appendChild(makeNode("div", "empty",
-        ITEMS.length ? "无匹配物品" : "未加载物品目录。请先运行 extract_catalog.py 和 json_to_js.py。"));
+      const message = ITEMS.length ? "无匹配物品" :
+        (window.ITEMS_DATA_LOAD_ERROR
+          ? "items_data.js 加载失败。请确认该文件与 items_browser.html 位于同一目录。"
+          : "未加载物品目录。请先运行 extract_catalog.py 和 json_to_js.py。");
+      grid.appendChild(makeNode("div", "empty", message));
       return;
     }
 
@@ -344,13 +347,6 @@ aside h3{font-size:13px;color:#8ecff7;text-transform:uppercase;letter-spacing:1p
         button.disabled = false;
       }, 3200);
     }
-  }
-
-  if (!Array.isArray(window.ITEMS)) {
-    const message = window.ITEMS_DATA_LOAD_ERROR
-      ? "items_data.js 加载失败。请确认该文件与 items_browser.html 位于同一目录。"
-      : "物品目录格式无效。请使用 json_to_js.py 重新生成 items_data.js。";
-    grid.appendChild(makeNode("div", "empty", message));
   }
 
   renderCats();
