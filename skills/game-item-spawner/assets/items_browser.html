@@ -310,7 +310,7 @@ aside h3{font-size:13px;color:#8ecff7;text-transform:uppercase;letter-spacing:1p
     try {
       if (!(await checkServer())) throw new Error("服务器离线");
       const accepted = await fetchJson(API + "/api/spawn?itemId=" + encodeURIComponent(id) + "&count=1");
-      if (!accepted.requestId || accepted.state !== "queued") {
+      if (!accepted.requestId || !["queued", "processing", "succeeded"].includes(accepted.state)) {
         throw new Error("服务器未确认请求入队");
       }
       button.textContent = "已入队，等待处理...";
