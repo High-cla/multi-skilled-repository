@@ -20,7 +20,7 @@
 | Skill | Description |
 |-------|-------------|
 | [`cmd-powershell-pitfalls`](./skills/cmd-powershell-pitfalls/SKILL.md) | CMD + PowerShell 混合脚本避坑指南 — 35 条规则与代码示例，涵盖编码、引号逃逸、延迟展开、管道编码、权限提权等场景。Use when writing or debugging `.cmd`/`.bat` scripts with embedded PowerShell. |
-| [`cli-first-decision`](./skills/cli-first-decision/SKILL.md) | CLI-First Decision 3.5 — DSH/FastCtx 优先路由、ast-grep、codebase-memory、DAG 并行，以及基于 run_code + 自动生成 tools:sdk 的 PTC TypeScript 编排。GitHub/Context7 插件不是依赖。 |
+| [`cli-first-decision`](./skills/cli-first-decision/SKILL.md) | CLI-First Decision 3.5 — DSH/FastCtx 优先路由、ast-grep、codebase-memory、DAG 并行，以及基于 run_code + 自动生成 tools:sdk 的 PTC runtime SDK 编排。GitHub/Context7 插件不是依赖。 |
 | [`customize-dsh`](./skills/customize-dsh/SKILL.md) | DeepSeek Harness (DSH) 自定义修改指南 — settings.yaml、profiles/*/cordis.patch.yml 与 bundles、技能创作与修复、agent preset、MCP server (dsh-mcp-client)、cordis 插件、自定义工具、slash 命令、启动失败与 patch 报错诊断。Use when editing or creating DSH configs/extensions. |
 | [`game-item-spawner`](./skills/game-item-spawner/SKILL.md) | 游戏模组"网页点击生成物品"系统 — 逆向找生成API、提取物品目录(内嵌JSON)、模组内嵌本地HTTP服务器(localhost:PORT)、网页物品浏览器(分类/搜索/点击生成)、GitHub Pages托管+全链路验证。Use when user wants in-game item spawning with a visual web UI (spawn item, item browser, cheat generator). |
 
