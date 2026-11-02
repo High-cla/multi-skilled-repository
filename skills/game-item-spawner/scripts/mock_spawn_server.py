@@ -166,7 +166,7 @@ def main(argv=None):
 
     runtime = MockRuntime()
     handler = type("BoundHandler", (Handler,), {"runtime": runtime})
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), handler)
+    server = ThreadingHTTPServer(("localhost", args.port), handler)
     server.daemon_threads = True
     print(f"[mock] listening on http://127.0.0.1:{args.port}/ (queue capacity: {QUEUE_CAPACITY})")
     print("[mock] status: /api/spawn returns queued; /api/spawn/status reports mock completion")
