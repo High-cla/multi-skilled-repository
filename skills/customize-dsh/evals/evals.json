@@ -120,6 +120,17 @@
         "config.id 是 session 使用的 preset identity",
         "config.plugins 是 Agent 子插件 entry list，整份替换时需要保留完整内容"
       ]
+    },
+    {
+      "id": 13,
+      "name": "settings-yaml-one-time-import",
+      "prompt": "我准备直接编辑 $DSH_HOME/settings.yaml 来修改当前 DSH 的默认模型和权限设置，这样是否是当前推荐方式？",
+      "assertions": [
+        "说明 settings.yaml 是旧版兼容导入文件，不是当前通用配置数据库",
+        "提到旧文件在 Settings 启动后导入一次并改名为 settings.yaml.imported",
+        "普通插件 Config 通过 Cordis patch，volatile 字段通过 Settings 表单/API 编辑",
+        "不得声称所有 settings.yaml 改动会自动热发布"
+      ]
     }
   ]
 }
