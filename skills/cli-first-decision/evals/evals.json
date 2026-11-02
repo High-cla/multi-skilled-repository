@@ -1,6 +1,6 @@
 {
   "skill": "cli-first-decision",
-  "version": "3.0",
+  "version": "3.1",
   "description": "Tool-routing and execution-orchestration regression cases for DSH/FastCtx environments without assumed GitHub or Context7 plugins.",
   "cases": [
     {
@@ -151,6 +151,42 @@
         "Check actual adapter availability/help",
         "Use only for known baked MCPs",
         "Otherwise choose an alternative or report blocker"
+      ]
+    },
+    {
+      "id": "E19",
+      "input": "In a DSH PTC session, combine multiple registered tools in one TypeScript program.",
+      "expected": [
+        "Use the injected tools:sdk namespace through run_code",
+        "Read actual generated tool names and argument schemas",
+        "Keep intermediate values inside the program and return only the needed result"
+      ]
+    },
+    {
+      "id": "E20",
+      "input": "Use Promise.all for multiple PTC tool bindings where some tools may be exclusive.",
+      "expected": [
+        "Do not assume Promise.all guarantees execution overlap",
+        "Only concurrency-safe calls may overlap; exclusive calls remain barriers",
+        "Respect maxParallelSubCalls"
+      ]
+    },
+    {
+      "id": "E21",
+      "input": "A PTC program performs a write and a later tool call fails.",
+      "expected": [
+        "Catch or report ToolCallError with toolName where possible",
+        "Do not assume previous side effects were rolled back",
+        "Inspect actual state before retrying non-idempotent operations"
+      ]
+    },
+    {
+      "id": "E22",
+      "input": "The active session is not PTC and no tools:sdk section is exposed.",
+      "expected": [
+        "Do not fabricate the PTC SDK",
+        "Use available native tools or the actual active execution mode",
+        "Do not pretend PTC execution occurred"
       ]
     }
   ]

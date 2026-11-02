@@ -1,4 +1,4 @@
-# CLI-First Decision 3.0 — Reference
+# CLI-First Decision 3.1 — Reference
 
 本参考表以 DSH 环境提供的信息为基准。工具调用前仍需确认当前注册状态和参数 schema；未注册的可选工具不得假设存在。
 
@@ -47,34 +47,34 @@ GitHub、Context7 插件不是本地 DSH 的必需依赖。它们只有在当前
 
 ### 搜索
 
-\`\`\`bash
+```bash
 rg -n -C 2 'pattern' src --glob '*.ts'
 fd -0 -e ts src | xargs -0 -r rg -n 'pattern'
-\`\`\`
+```
 
 ### JSON / YAML
 
-\`\`\`bash
+```bash
 curl -fsS "$URL" | jq '.items[] | {id, name}'
 yq '.services.api.port' config.yaml
-\`\`\`
+```
 
 ### 压缩文件
 
-\`\`\`bash
+```bash
 rg -z 'pattern' archive.tar.gz
 zstd -d -c data.jsonl.zst | jq -c 'select(.level == "error")'
-\`\`\`
+```
 
 仅在确认文件格式和工具版本后使用对应参数。不要为了一条命令默认解压所有数据到磁盘。
 
 ### 结构搜索
 
-\`\`\`bash
+```bash
 sg --pattern 'console.log($A)' --lang ts src
-\`\`\`
+```
 
-具体参数以安装版本的 \`sg --help\` 和项目配置为准。Windows DSH 环境路径使用已约定的 \`C:/...\` 形式。
+具体参数以安装版本的 `sg --help` 和项目配置为准。Windows DSH 环境路径使用已约定的 `C:/...` 形式。
 
 ### 机械替换
 
@@ -97,7 +97,7 @@ sg --pattern 'console.log($A)' --lang ts src
 
 交叉验证路径：
 
-\`\`\`text
+```text
 codebase-memory 定位符号
         |
 获取 callers / callees / dependencies
@@ -109,7 +109,7 @@ FastCtx grep / rg / sg 核查当前源码
 检查测试、配置和动态调用
         |
 确定真实影响面
-\`\`\`
+```
 
 若图谱没有结果或与源码冲突，标记索引可能不完整/过期，以当前源码和可复现测试为准。
 
@@ -140,16 +140,46 @@ FastCtx grep / rg / sg 核查当前源码
 | GitHub 插件 | 本地 git clone；公开只读用 Web/curl；远程写入需认证通道 |
 | MCP 工具 | 仅对已 bake 工具尝试 mcp2cli；否则使用等价工具或报告阻塞 |
 
-## 8. PTC 编排边界
+## 8. DSH PTC TypeScript SDK
 
-- 先从当前工具注册表读取真实名称和输入输出 schema。
-- 无依赖调用使用 Promise.all；跨层数据依赖用 await。
-- 同一文件写操作不并发。
-- 失败要保留成功分支结果。
-- 只重试幂等且可安全重试的动作。
-- 示例中的 wrapper 名称只是伪代码，不能当作真实工具 API。
-- 如果当前运行时未提供 PTC SDK，不得编造 SDK 接口。
+PTC preset 使用 `run_code` 传输入口和自动生成的 `tools:sdk` 类型化工具 SDK。SDK 根据当前 agent 可见的工具注册表生成；读取本会话注入的签名，不硬编码或猜测工具名/参数。
 
+- 多步骤程序通过 `tools.<tool_name>(args)` 使用当前 SDK 暴露的工具绑定。
+- PTC-only 模式下，具名工具调用通过 SDK 绑定进入执行流水线，不绕过 `run_code` 直接调用。
+- 仅 `run_code` 外层 logs/return value 进入模型上下文；程序内部中间值不自动回传。
+- `packages/sdk`（进程外驱动 Harness）与 PTC `tools:sdk`（模型程序调用当前工具）是不同概念。
+
+### PTC 示例
+
+假设当前生成 SDK 中存在 `tools.read_file({ path })`，并且参数已被工具调度策略判定为可安全并行：
+
+~~~~ts
+const paths = ["/project/a.ts", "/project/b.ts"];
+const contents = await Promise.all(
+  paths.map((path) => tools.read_file({ path }))
+);
+return contents.map((text, index) => ({
+  path: paths[index],
+  chars: text.length,
+  preview: text.slice(0, 800),
+}));
+~~~~
+
+示例中的 `read_file` 和参数形状不是固定内置承诺，必须以当前 `tools:sdk` 为准。
+
+### 并发约束
+
+- 只有 `isConcurrencySafe(args)` 明确返回 `true` 的工具调用才允许重叠。
+- 未声明/未知/判断失败默认 `exclusive`，作为串行屏障。
+- 并行上限由 `maxParallelSubCalls` 控制；参考实现默认 10，以当前运行时配置为准。
+- `Promise.all` 只是程序层并发表达，不可用来绕过工具自身的并发策略。
+
+### 错误、安全与副作用
+
+- 绑定调用失败在程序中表现为 `ToolCallError`，可读取 `toolName`。
+- 程序运行失败返回结构化 `CODE_RUN_FAILED`。
+- 普通副作用不会因程序失败自动回滚；非幂等写入失败后先检查实际状态。
+- worker-thread 不是 OS 级文件/网络权限沙箱；按 DSH 工具权限和 sandbox 契约执行，不用 Node API/子进程绕过工具边界。
 ## 9. 验收记录
 
 一次任务至少记录：
