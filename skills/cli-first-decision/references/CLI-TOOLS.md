@@ -113,7 +113,7 @@ just --list
 - `sg`：代码 AST 形状、语法节点、结构规则与代码重写。
 - `fd`：文件路径集合。
 - `sd`：不依赖语法结构的文本替换。
-- `jq/yq`：JSON/YAML/XML 数据结构；处理大数据时避免 `jq --slurp` 全量载入，优先使用 `inputs`、`--stream` 或分块。
+- `jq/yq`：JSON/YAML/XML 数据结构；避免无必要的 `jq --slurp` 全量聚合。处理 JSONL/多个顶层 JSON 值时用 `jq -n 'inputs | …'`（`-n` 防止首个输入先被隐式消费）；单个超大 JSON 文档评估 `--stream` 或分块处理。
 - `curl`：HTTP API；优先检查状态码和响应体。
 - `zstd -d -c`：流式解压，不需要保留解压文件时优先。
 - `duckdb`：需要 SQL 聚合 JSONL/Parquet/CSV 等数据时。
@@ -123,6 +123,18 @@ just --list
 
 遇到工具缺失时：FastCtx 专用能力优先；其次使用已安装等价 CLI；最后才使用内置工具/手动处理。不要未经用户授权静默安装依赖。
 
+
+### jq 大输入的正确逐实体处理
+
+```bash
+# JSONL / 多个顶层 JSON 值：-n 使 inputs 从第一个实体开始读取
+jq -n 'inputs | select(.level == "error")' events.jsonl
+
+# 单个超大 JSON 文档：使用 stream 模式，并按事件结构编写 filter
+jq --stream '…' very-large.json
+```
+
+不要写成 `jq 'inputs | …'` 来处理完整 JSONL：jq 默认先把第一个输入作为 filter 的隐式输入，`inputs` 随后只读取剩余输入；`-n` 才能让 `inputs` 从头读取。`--stream` 的输出结构不同，filter 需要按路径/值事件处理，不能简单替换为同一个 filter。
 
 ## 7. 官方文档与版本来源速查
 

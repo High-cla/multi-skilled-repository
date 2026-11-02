@@ -19,8 +19,8 @@
 
 | Skill | Description |
 |-------|-------------|
-| [`cmd-powershell-pitfalls`](./skills/cmd-powershell-pitfalls/SKILL.md) | CMD + PowerShell 混合脚本避坑指南 — 35 条规则与代码示例，涵盖编码、引号逃逸、延迟展开、管道编码、权限提权等场景。Use when writing or debugging `.cmd`/`.bat` scripts with embedded PowerShell. |
-| [`cli-first-decision`](./skills/cli-first-decision/SKILL.md) | CLI-First Decision 3.6 — DSH/FastCtx 优先路由、ast-grep、codebase-memory、DAG 并行，以及基于 run_code + 自动生成 tools:sdk 的 PTC runtime SDK 编排。GitHub/Context7 插件不是依赖。 |
+| [`cmd-powershell-pitfalls`](./skills/cmd-powershell-pitfalls/SKILL.md) | CMD + PowerShell 混合脚本避坑指南 — 35 条规则与代码示例，涵盖代码页/编码、引号与变量展开、路径、退出码、UAC 最小权限和 MSYS2 参数转换。Use when writing or debugging `.cmd`/`.bat` scripts with embedded PowerShell. |
+| [`cli-first-decision`](./skills/cli-first-decision/SKILL.md) | CLI-First Decision 3.7 — DSH/FastCtx 优先路由、ast-grep、codebase-memory、DAG 并行，以及基于 run_code + 自动生成 tools:sdk 的 PTC runtime SDK 编排。GitHub/Context7 插件不是依赖。 |
 | [`customize-dsh`](./skills/customize-dsh/SKILL.md) | DeepSeek Harness (DSH) 自定义修改指南 — settings.yaml、profiles/*/cordis.patch.yml 与 bundles、技能创作与修复、agent preset、MCP server (dsh-mcp-client)、cordis 插件、自定义工具、slash 命令、启动失败与 patch 报错诊断。Use when editing or creating DSH configs/extensions. |
 | [`game-item-spawner`](./skills/game-item-spawner/SKILL.md) | 游戏模组"网页点击生成物品"系统 — 逆向找生成API、提取物品目录(内嵌JSON)、模组内嵌本地HTTP服务器(localhost:PORT)、网页物品浏览器(分类/搜索/点击生成)、GitHub Pages托管+全链路验证。Use when user wants in-game item spawning with a visual web UI (spawn item, item browser, cheat generator). |
 
@@ -36,11 +36,11 @@
 
 | # | 类别 | 问题 | 严重性 |
 |---|------|------|--------|
-| 1 | 🔤 编码 | `chcp 65001` 破坏 `%VAR%` 展开 | 🔴 High |
+| 1 | 🔤 编码 | 区分控制台代码页、PowerShell 管道与文件编码 | 🟡 Medium |
 | 2 | 🔄 循环 | `for` 循环体内 `)` 被当作结束符吞掉 | 🔴 High |
 | 3 | ❝ 引号 | `\\\"` 在 CMD 字符串中无效 | 🔴 High |
-| 4 | 🧩 对象类型 | `Get-Location` 返回 `PathInfo` 而非字符串 | 🔴 High |
-| 5 | ⏳ 延迟展开 | 循环内改变量必须用 `!var!` | 🔴 High |
+| 4 | 🧩 路径对象 | 使用 `Join-Path` 处理 `PathInfo` 和路径拼接 | 🟡 Medium |
+| 5 | ⏳ 延迟展开 | 括号块读取更新值时按需使用 `!var!`，并注意字面 `!` | 🟡 Medium |
 | 6 | 📦 重定向 | 括号 `()` 与输出重定向 `>` 的优先级问题 | 🟡 Medium |
 | 7 | ➖ 续行 | `^` 在双引号内不起作用 | 🟡 Medium |
 | 8 | 💲 变量传递 | `$` / `%` 在 CMD → PowerShell 的传递规则 | 🟡 Medium |
@@ -58,7 +58,7 @@
 
 ### cli-first-decision
 
-**核心规则**：本地文件优先 FastCtx；终端批处理优先 CLI；结构搜索使用 ast-grep；调用链和影响面使用 codebase-memory；多步骤工具操作使用 DSH PTC 的 run_code + tools:sdk TypeScript 组合。先确认当前 SDK 签名，再按 DAG 合并/并行，最后验证结果。
+**核心规则**：本地文件优先 FastCtx；终端批处理优先 CLI；结构搜索使用 ast-grep；调用链和影响面使用 codebase-memory；多步骤工具操作使用 DSH PTC 的 run_code + tools:sdk runtime-language 组合。先确认当前 SDK 签名，再按 DAG 合并/并行，最后验证结果。
 
 | 场景 | 首选 |
 |------|------|
@@ -70,7 +70,7 @@
 | 长任务 | run_background + job_output |
 | MCP 退路 | 仅使用已 bake 的 mcp2cli |
 
-GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运行时真实注册时才可选用。从零开始先进行架构选型与网络官方文档调研，并明确速度/内存优先优化；并新增 DSH/FastCtx/CLI 上游权威文档索引与 Context7 文档检索流程；附带 [65 个评估用例](./skills/cli-first-decision/evals/evals.json)。
+GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运行时真实注册时才可选用。从零开始先进行架构选型与网络官方文档调研，并明确速度/内存优先优化；并新增 DSH/FastCtx/CLI 上游权威文档索引与 Context7 文档检索流程；附带 [74 个评估用例](./skills/cli-first-decision/evals/evals.json)。
 
 ➡️ [技能主体](./skills/cli-first-decision/SKILL.md) · [工具总参考](./skills/cli-first-decision/references/REFERENCE.md) · [CLI 工具链](./skills/cli-first-decision/references/CLI-TOOLS.md) · [权威文档索引](./skills/cli-first-decision/references/AUTHORITATIVE-SOURCES.md) · [架构设计与官方文档调研](./skills/cli-first-decision/references/ARCHITECTURE-DESIGN.md) · [编程规则](./skills/cli-first-decision/references/PROGRAMMING-RULES.md) · [工程原则](./skills/cli-first-decision/references/ENGINEERING-PRINCIPLES.md) · [评估用例](./skills/cli-first-decision/evals/evals.json)
 

@@ -1,6 +1,6 @@
 {
   "skill": "cli-first-decision",
-  "version": "3.6",
+  "version": "3.7",
   "description": "Regression cases for DSH PTC contracts, FastCtx versioned MCP behavior, Context7 documentation retrieval, official CLI manuals, programming quality, and speed/memory optimization.",
   "cases": [
     {
@@ -527,6 +527,8 @@
       "expected": [
         "Consult the installed jq manual/version and prefer streaming filters when possible",
         "Recognize --slurp materializes the entire input into one array and may greatly increase memory",
+        "Use jq -n with inputs for JSONL/multiple top-level values so the first record is not consumed implicitly",
+        "Use --stream for a single very large JSON document and adapt the filter to its path/value event shape",
         "Measure peak memory and avoid unnecessary intermediate materialization",
         "Validate output correctness and exit status"
       ]
@@ -588,6 +590,95 @@
         "Use version-specific IDs compatible with package manifests/lockfiles where available",
         "Query each architectural concern separately, such as performance, consistency, deployment and security",
         "Verify Context7 results against the official docs/repository and record source URLs, versions and dates"
+      ]
+    },
+    {
+      "id": "E66",
+      "input": "Audit a DSH PTC program's Session history and replay behavior.",
+      "expected": [
+        "Distinguish execution-local canonical binding objects from durable log-only nested dispatch events",
+        "Recognize tool/ptc-dispatch-start and tool/ptc-dispatch record normalized arguments and rendered outcomes",
+        "Do not claim nested dispatch outcomes are absent from Session persistence",
+        "Do not claim log-only events are reinserted into the model transcript"
+      ]
+    },
+    {
+      "id": "E67",
+      "input": "Process JSONL with jq inputs without losing the first record.",
+      "expected": [
+        "Use jq -n 'inputs | ...' for multiple top-level JSON values",
+        "Explain that jq normally consumes the first top-level input as its implicit input",
+        "Use --stream for one very large JSON document only with a filter designed for the stream event representation"
+      ]
+    },
+    {
+      "id": "E68",
+      "input": "Use FastCtx v0.2.6 grep, glob and background jobs on a large repository.",
+      "expected": [
+        "Distinguish grep filtering (.gitignore/.ignore, hidden files searched, .git and binary skipped) from glob's .ignore-only default which includes hidden files and .git",
+        "Treat background job output as a persistent log file and job_output as a windowed view, not an 8 MiB rolling ring",
+        "Use run timeout for bounded foreground work and run_background for jobs without a timeout",
+        "Keep replace file/result size and candidate limits within the release contract"
+      ]
+    },
+    {
+      "id": "E69",
+      "input": "Write a Windows CMD/PowerShell script that needs execution-policy handling, file encodings and administrator privileges.",
+      "expected": [
+        "Do not recommend ExecutionPolicy Bypass as a universal default; inspect effective scope and Group Policy",
+        "Distinguish Windows PowerShell 5.1 Set-Content default encoding from PowerShell 7+ UTF-8 No BOM defaults",
+        "Do not automatically elevate the whole script; request authorization and elevate only the necessary operation",
+        "Do not claim LongPathsEnabled alone enables long paths for every application"
+      ]
+    },
+    {
+      "id": "E70",
+      "input": "Use DSH PTC when the currently loaded runtime could be TypeScript or Python.",
+      "expected": [
+        "Read ctx.ptcRuntime.language and the injected tools:sdk instructions before writing run_code",
+        "Use TypeScript syntax only when the active runtime generates the TypeScript SDK",
+        "Use the injected Python program syntax and SDK when the active runtime is Python",
+        "Do not assume experimental Python runtime has the same sandbox capabilities as the Node provider"
+      ]
+    },
+    {
+      "id": "E71",
+      "input": "A PTC nested tool returns an image or additionalContexts. Determine what enters the model context.",
+      "expected": [
+        "Distinguish outer run_code logs/return from independently forwarded image and additionalContexts payloads",
+        "Account for forwarded content in the model context budget",
+        "Do not assume every nested result must be explicitly returned by run_code to reach the conversation",
+        "Keep nested dispatch persistence and model-context forwarding as separate mechanisms"
+      ]
+    },
+    {
+      "id": "E72",
+      "input": "A PTC Promise.all batch includes independent calls, but one child binding may reject and successful branches must be retained.",
+      "expected": [
+        "Explain that an uncaught Promise.all rejection rejects the aggregate and can fail the outer code run",
+        "Use Promise.allSettled or per-call try/catch to capture successful and failed outcomes separately",
+        "Remember DSH may cancel and drain still-running bindings after an outer program failure",
+        "Do not assume prior side effects are rolled back"
+      ]
+    },
+    {
+      "id": "E73",
+      "input": "Optimize a PowerShell file-processing script and choose between cmdlets and .NET APIs.",
+      "expected": [
+        "Do not assume .NET APIs are always faster or more memory-efficient than cmdlets",
+        "Compare lazy enumeration/streaming with array or string materialization",
+        "Measure representative runtime and peak memory before selecting the lower-level implementation",
+        "Preserve encoding, error, cancellation and cleanup semantics"
+      ]
+    },
+    {
+      "id": "E74",
+      "input": "Read YAML configuration in a clean PowerShell 5.1 or PowerShell 7 environment.",
+      "expected": [
+        "Use ConvertFrom-Json only for JSON data",
+        "Do not assume YAML parsing is built into PowerShell",
+        "Check for an installed YAML module or use a version-verified yq executable",
+        "Validate configuration shape and types at the boundary"
       ]
     }
   ]

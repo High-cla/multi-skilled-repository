@@ -1,1 +1,1 @@
-Nothing should be ignored in this case, as the changes only include markdown files (SKILL.md) which are source/config files and not build artifacts, dependencies, or temporary files.
+# No ignore patterns are currently required.
