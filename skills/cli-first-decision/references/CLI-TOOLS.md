@@ -54,6 +54,7 @@ FastCtx `run` 使用 Bash；Windows 下使用 Git Bash 兼容的 POSIX 语法。
 - 使用 `--yes`、`--no-edit` 等自动化选项。
 - 命令默认受四分钟上限约束；长任务用后台机制。
 - 非零退出码也要读取 stdout/stderr 和状态后判断，不可直接吞错。
+- 多段管道中任一阶段失败都应影响最终状态时，显式启用 `set -o pipefail`；Bash 默认只返回 pipeline 最后一个命令的退出码。
 - 所有路径正确引用；含空格/特殊字符的批处理优先 NUL 分隔。
 - 避免在命令中拼接不可信输入，避免不必要的 `eval`。
 
@@ -112,7 +113,7 @@ just --list
 - `sg`：代码 AST 形状、语法节点、结构规则与代码重写。
 - `fd`：文件路径集合。
 - `sd`：不依赖语法结构的文本替换。
-- `jq/yq`：JSON/YAML/XML 数据结构。
+- `jq/yq`：JSON/YAML/XML 数据结构；处理大数据时避免 `jq --slurp` 全量载入，优先使用 `inputs`、`--stream` 或分块。
 - `curl`：HTTP API；优先检查状态码和响应体。
 - `zstd -d -c`：流式解压，不需要保留解压文件时优先。
 - `duckdb`：需要 SQL 聚合 JSONL/Parquet/CSV 等数据时。
