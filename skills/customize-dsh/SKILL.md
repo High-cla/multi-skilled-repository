@@ -160,21 +160,34 @@ user-invocable: true              # 可选，默认 true
 
 ## Agent presets
 
-`$DSH_HOME/.agent-presets/<id>/` 下存放 preset：
+先区分两种容易混淆的概念：
 
-```
-agent.cordis.yml   # 插件行顶层列表（必填，preset 的组合）
-preset.yml         # 可选展示元信息：只有 name/description；id=目录名、trust 来自根，不可写
-plugins/           # preset 自带插件（相对路径从 preset 目录解析）
+1. **当前 Cordis Agent preset**：由 `@deepseek-ai/dsh-agent-preset` 声明，通常作为 profile composition 中的一条插件 entry。其 `config.id` 是会话保存的 preset identity，entry 自身的 `id` 是 Loader patch 定位键；`config.plugins` 是 Agent 子插件列表。修改声明只影响之后创建的 Agent，不会自动改写已有会话。
+2. **旧式目录 preset**：`$DSH_HOME/.agent-presets/<id>/` 下的 `preset.yml` + `agent.cordis.yml` 是旧格式。当前上游已不再读取这种目录；不要把旧目录当成当前 preset 的生效来源，也不要只修改旧目录来尝试修复 preset。
+
+当前 Cordis 声明形态（字段以已安装版本的 config catalog 为准）：
+
+```yaml
+- id: agent-preset-registry
+  name: '@deepseek-ai/dsh-agent-preset-registry'
+  config:
+    default: standard
+- id: preset-standard
+  name: '@deepseek-ai/dsh-agent-preset'
+  config:
+    id: standard
+    plugins:
+      - id: child-tool
+        name: '@deepseek-ai/example-plugin'
+        config: {}
 ```
 
-- 目录名必须是合法 preset id（`[a-z0-9][a-z0-9-]*`），否则跳过；损坏（YAML 无法解析/非具名插件行列表）以 `broken` 原因列出而非跳过
-- 常驻挂载（standing mount）每个进程只一次；加入的会话共享一份工具/提示词/投影，插件按 Session/Agent 键控状态
-- 视角解析顺序 `agent → preset → global`（近者遮蔽远者）
-- `settings.yaml` 的 `agent-presets.default` 选择默认 preset；`roots`/`includeUserRoot` 可配置（缺省追加 `$DSH_HOME/.agent-presets` 为 user 根）
-- **切换限制**：preset 只能在"尚未产生任何内容的空白会话"上切换（`recompose`）；默认值只影响此后创建的会话；preset 文件是输入而非持久化目标（loader 不写回）
-- 创作是 copy-only：`ctx.agentPresets.copy()` 从现有 preset 整目录复制；`remove()` 只删 user 根下的 preset
-- preset 的权限 = 它引用的插件的权限（trust 只用于展示 system/user 差异，不强制隔离）
+- entry 的 `id` 与 `config.id` 不是同一个标识；不要互换。
+- `plugins` 是 Cordis 子 entry 列表，子插件仍受 Loader dependency、schema、scope 和 lifecycle 规则约束。
+- 随包的 `@deepseek-ai/dsh-agent-preset` README 说明声明会提前加载，变更影响随后创建的 Agent；已有 Agent composition 保持稳定。
+- 默认 preset / 是否允许用户选择属于 `agent-presets` settings namespace 的策略；不要把“默认值影响新会话”解释为现有会话自动切换。
+- 如需新增或复制 preset，优先使用当前 Web UI/Agent Preset 管理能力；若通过运行时 API 或工具操作，先从当前环境的 API/工具 schema 确认可用方法（例如 `agentPresets` service），不要假设旧版 `copy/remove` 或文件系统布局仍可用。
+- preset plugin row 的配置 patch 遵循普通 Cordis patch 语义：按 entry id 定位，整份替换 config 时重述完整 `plugins` 列表；不要直接编辑随包安装目录中的 shipped composition。
 
 ## 插件（cordis package）与自定义工具
 
