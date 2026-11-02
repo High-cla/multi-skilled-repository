@@ -1,6 +1,6 @@
 {
   "skill": "cli-first-decision",
-  "version": "3.6",
+  "version": "3.7",
   "description": "Regression cases for DSH PTC contracts, FastCtx versioned MCP behavior, Context7 documentation retrieval, official CLI manuals, programming quality, and speed/memory optimization.",
   "cases": [
     {
@@ -527,6 +527,8 @@
       "expected": [
         "Consult the installed jq manual/version and prefer streaming filters when possible",
         "Recognize --slurp materializes the entire input into one array and may greatly increase memory",
+        "Use jq -n with inputs for JSONL/multiple top-level values so the first record is not consumed implicitly",
+        "Use --stream for a single very large JSON document and adapt the filter to its path/value event shape",
         "Measure peak memory and avoid unnecessary intermediate materialization",
         "Validate output correctness and exit status"
       ]
@@ -588,6 +590,45 @@
         "Use version-specific IDs compatible with package manifests/lockfiles where available",
         "Query each architectural concern separately, such as performance, consistency, deployment and security",
         "Verify Context7 results against the official docs/repository and record source URLs, versions and dates"
+      ]
+    },
+    {
+      "id": "E66",
+      "input": "Audit a DSH PTC program's Session history and replay behavior.",
+      "expected": [
+        "Distinguish execution-local canonical binding objects from durable log-only nested dispatch events",
+        "Recognize tool/ptc-dispatch-start and tool/ptc-dispatch record normalized arguments and rendered outcomes",
+        "Do not claim nested dispatch outcomes are absent from Session persistence",
+        "Do not claim log-only events are reinserted into the model transcript"
+      ]
+    },
+    {
+      "id": "E67",
+      "input": "Process JSONL with jq inputs without losing the first record.",
+      "expected": [
+        "Use jq -n 'inputs | ...' for multiple top-level JSON values",
+        "Explain that jq normally consumes the first top-level input as its implicit input",
+        "Use --stream for one very large JSON document only with a filter designed for the stream event representation"
+      ]
+    },
+    {
+      "id": "E68",
+      "input": "Use FastCtx v0.2.6 grep, glob and background jobs on a large repository.",
+      "expected": [
+        "Distinguish grep filtering (.gitignore/.ignore, hidden files searched, .git and binary skipped) from glob's .ignore-only default which includes hidden files and .git",
+        "Treat background job output as a persistent log file and job_output as a windowed view, not an 8 MiB rolling ring",
+        "Use run timeout for bounded foreground work and run_background for jobs without a timeout",
+        "Keep replace file/result size and candidate limits within the release contract"
+      ]
+    },
+    {
+      "id": "E69",
+      "input": "Write a Windows CMD/PowerShell script that needs execution-policy handling, file encodings and administrator privileges.",
+      "expected": [
+        "Do not recommend ExecutionPolicy Bypass as a universal default; inspect effective scope and Group Policy",
+        "Distinguish Windows PowerShell 5.1 Set-Content default encoding from PowerShell 7+ UTF-8 No BOM defaults",
+        "Do not automatically elevate the whole script; request authorization and elevate only the necessary operation",
+        "Do not claim LongPathsEnabled alone enables long paths for every application"
       ]
     }
   ]
