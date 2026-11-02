@@ -491,6 +491,7 @@ REPORT:
 | 从零开始选型、架构设计、官方文档调研、架构比较和 ADR/C4 记录 | [ARCHITECTURE-DESIGN.md](references/ARCHITECTURE-DESIGN.md) |
 | 架构取舍、工程定律、复杂性和性能决策 | [ENGINEERING-PRINCIPLES.md](references/ENGINEERING-PRINCIPLES.md) |
 | FastCtx、ast-grep、codebase-memory、PTC 路由 | [REFERENCE.md](references/REFERENCE.md) |
+| 上游项目仓库、官方 CLI 手册、PTC/FastCtx 契约和性能工具依据 | [AUTHORITATIVE-SOURCES.md](references/AUTHORITATIVE-SOURCES.md) |
 
 ### 编程执行底线
 
