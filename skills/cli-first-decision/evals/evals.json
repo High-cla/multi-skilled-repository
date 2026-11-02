@@ -1,6 +1,6 @@
 {
   "skill": "cli-first-decision",
-  "version": "3.0",
+  "version": "3.1",
   "description": "Tool-routing and execution-orchestration regression cases for DSH/FastCtx environments without assumed GitHub or Context7 plugins.",
   "cases": [
     {
