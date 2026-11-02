@@ -189,15 +189,16 @@ return contents.map((content, index) => ({
 ### 9.3 并发调度
 
 - DSH 当前 `@deepseek-ai/dsh-tools` 文档将 `maxParallelSubCalls` 的默认值列为 10；配置为 1 时恢复严格串行。该默认值具有版本属性，不要假设未来或定制 runtime 固定不变。
+- `run_code` 根调用本身是 exclusive；`maxParallelSubCalls` 默认 10，必须为正整数，设为 1 即串行。
 - `Promise.all` 只代表程序发起并发意图，不保证子调用一定同时执行。
-- 只有工具当前参数被调度策略判定为 concurrency-safe 时才允许重叠；exclusive/未知调用必须遵从串行屏障。
+- 只有工具当前参数被调度策略判定为 parallel 时才允许重叠；exclusive/未知调用 fail-closed 并形成串行屏障。
 - 共享文件写入、远程副作用、提交/发布/删除等操作不得仅为加速而并行。先拆分只读预检和副作用阶段。
 - 调用结果的外层顺序/关联由 DSH 管线维护；不要通过程序端 Promise 完成顺序推断安全顺序。
 
 ### 9.4 结果、内存与输出
 
 - PTC 子调用中间结果在程序执行本地保留；当前 DSH 工具包文档明确指出中间绑定值不按字节数限制，可能耗尽进程或 worker 内存。
-- 大文件/大响应应在程序内筛选、流式或分块处理、汇总必要字段；及时解除不再使用的引用，避免把所有完整结果保存在数组中。
+- 大文件/大响应应在程序内筛选、流式或分块处理、汇总必要字段；及时解除不再使用的引用，避免把所有完整结果保存在数组中。注意：PTC executor 明确说明中间 binding 值没有字节数上限；Node 的 `maxMessageBytes` 只约束控制消息、待处理 binding 参数字节和控制写队列，`maxOutputBytes` 才约束外层 logs/完成值/诊断。`maxOldGenerationSizeMb` 也不是全进程 RSS 上限。
 - 只有外层 `run_code` 的返回值/log 输出进入模型上下文（图片等附加上下文按 DSH 当前契约处理）。外层输出仍受大小限制；只返回模型决策所需信息。
 - 控制输出体积不等于控制程序内存。程序内部仍需显式设定数据规模和缓存上限。
 
