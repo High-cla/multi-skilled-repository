@@ -1,4 +1,4 @@
-# CLI-First Decision 3.5 — Reference
+# CLI-First Decision 3.6 — Reference
 
 本参考表以 DSH 环境提供的信息为基准。工具调用前仍需确认当前注册状态和参数 schema；未注册的可选工具不得假设存在。
 
@@ -163,7 +163,7 @@ PTC 的权威定义来自 DSH 当前安装版本的 `@deepseek-ai/dsh-tools`、`
 
 - PTC presentation 下，模型直接调用的执行入口是 `run_code`；其它当前可见的工具由运行时按 `ctx.ptcRuntime.language` 生成程序内 SDK。
 - 当前官方 `run_code` schema 要求 `code` 与 `description` 两个字段。TypeScript runtime 的 `code` 是异步函数体，支持顶层 `await` / `return`，但只支持可擦除类型语法。
-- SDK 的类型渲染语言由加载的 PTC runtime 决定；`dsh-tools` 当前包含 TypeScript 与 Python renderer，Node provider 执行 TypeScript，Python runtime 位于实验性 package。**不得假设所有 DSH PTC 环境恒为 TypeScript。**
+- SDK 的类型渲染语言由加载的 PTC runtime 决定；`dsh-tools` 当前包含 TypeScript 与 Python renderer。已发布 Node provider 执行 TypeScript；Python runtime 是需显式组合的实验包，目前没有发布 profile 默认启用，且不提供与 Node provider 相同的文件约束。**不得假设所有 DSH PTC 环境恒为 TypeScript 或具有相同 sandbox 能力。**
 - 以本会话展示的 `tools:sdk` 声明为准，精确核验工具名称、参数、返回类型和可见范围。不要复制旧会话的 schema，不要自行创造工具名。
 - PTC-only 模式中不能把 SDK 绑定误认为模型顶层工具；应通过 `run_code` 内的 `await tools.<tool_name>(args)` 进入调用流水线。
 - `packages/sdk`（进程外驱动 Harness）与 PTC 自动生成的 `tools:sdk`（程序内调用当前 agent 工具）不是同一概念。
@@ -188,7 +188,7 @@ return contents.map((content, index) => ({
 
 ### 9.3 并发调度
 
-- DSH 当前 `@deepseek-ai/dsh-tools` 文档将 `maxParallelSubCalls` 的默认值列为 10；配置为 1 时恢复严格串行。该默认值具有版本属性，不要假设未来或定制 runtime 固定不变。
+- DSH 当前 `@deepseek-ai/dsh-tool-executor-ptc` 文档将 `maxParallelSubCalls` 默认值列为 10，且必须是正整数；设为 1 即串行。根 `run_code` 调用本身是 exclusive；该上限约束每个程序内部并行安全的嵌套调用。该默认值具有版本属性，不要假设未来或定制 runtime 固定不变。
 - `run_code` 根调用本身是 exclusive；`maxParallelSubCalls` 默认 10，必须为正整数，设为 1 即串行。
 - `Promise.all` 只代表程序发起并发意图，不保证子调用一定同时执行。
 - 只有工具当前参数被调度策略判定为 parallel 时才允许重叠；exclusive/未知调用 fail-closed 并形成串行屏障。
@@ -197,14 +197,14 @@ return contents.map((content, index) => ({
 
 ### 9.4 结果、内存与输出
 
-- PTC 子调用中间结果在程序执行本地保留；当前 DSH 工具包文档明确指出中间绑定值不按字节数限制，可能耗尽进程或 worker 内存。
+- PTC 子调用中间结果只存在于执行局部，不进入 Session 历史/回放；官方 PTC executor 明确指出中间 binding 值没有字节数上限，可能耗尽进程/worker 内存。
 - 大文件/大响应应在程序内筛选、流式或分块处理、汇总必要字段；及时解除不再使用的引用，避免把所有完整结果保存在数组中。注意：PTC executor 明确说明中间 binding 值没有字节数上限；Node 的 `maxMessageBytes` 只约束控制消息、待处理 binding 参数字节和控制写队列，`maxOutputBytes` 才约束外层 logs/完成值/诊断。`maxOldGenerationSizeMb` 也不是全进程 RSS 上限。
 - 只有外层 `run_code` 的返回值/log 输出进入模型上下文（图片等附加上下文按 DSH 当前契约处理）。外层输出仍受大小限制；只返回模型决策所需信息。
 - 控制输出体积不等于控制程序内存。程序内部仍需显式设定数据规模和缓存上限。
 
 ### 9.5 超时、安全与副作用
 
-- 当前工具目录对 Node provider 给出的 `timeoutMs` 默认值为 120,000 ms、最大值为 600,000 ms；Node provider README 还列出 `maxOldGenerationSizeMb` 默认 512 MiB、`maxOutputBytes` 默认 64 MiB、`maxMessageBytes` 默认 128 MiB 等参数。它们均为 provider 版本配置，不等于所有 PTC 中间值都有相同 byte cap；必须以本会话 runtime/schema 为准。
+- Node provider 提供 `per-call`（默认，异步函数体/每次新进程）、`vm-script`（Script 语法，可选 `scriptPersistence` 为每个 owner 保留 context）和 `persistent-in-memory`（每 Agent REPL）三种执行模式。其 `timeoutMs` 默认 120,000 ms、最大 600,000 ms；`maxOldGenerationSizeMb` 默认 512 MiB（V8 old-generation heap，不是全进程 RSS 上限）、`maxOutputBytes` 默认 64 MiB（外层 logs/完成值/诊断预算）、`maxMessageBytes` 默认 128 MiB（控制消息、未完成 binding 参数字节和排队控制写入）、`maxPendingCalls` 默认 128。它们都是 Node provider 版本配置；尤其 `maxMessageBytes` 不会限制任意中间返回对象图，不能当成中间值总内存上限。
 - 更宽的 `sandbox_permissions` 需要解释理由并经审批；权限只适用于该次执行。嵌套工具仍遵守自身策略与审批。
 - Runtime 的 isolation/substrate 描述不能单独证明 OS 级安全隔离。检查当前 PTC provider、实际 sandbox mode 和执行结果报告的 enforcement facts；按 DSH sandbox policy 操作，不通过 Node API 或子进程绕过宿主权限。
 - 对于取消和失败，区分外层代码异常、超时/取消、SDK 子工具错误和 sandbox 拒绝。工具定义若要求协作式取消，应观察传入的 signal。
