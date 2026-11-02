@@ -233,14 +233,16 @@ public static class SpawnHttpServer
             var query = HttpUtility.ParseQueryString(request.Url.Query);
             string id = query["id"] ?? "";
             SpawnJob job;
+            string json;
             lock (QueueGate)
             {
                 Statuses.TryGetValue(id, out job);
-                if (job != null)
-                    WriteJson(context.Response, 200, JobJson(job));
-                else
-                    WriteJson(context.Response, 404, "{\"ok\":false,\"err\":\"unknown requestId\"}");
+                json = job == null ? null : JobJson(job);
             }
+            if (json == null)
+                WriteJson(context.Response, 404, "{\"ok\":false,\"err\":\"unknown requestId\"}");
+            else
+                WriteJson(context.Response, 200, json);
             return;
         }
 
@@ -294,13 +296,16 @@ public static class SpawnHttpServer
 
     private static string JobJson(SpawnJob job)
     {
-        return "{\"ok\":" + (job.State == "rejected" ? "false" : "true") +
-            ",\"mode\":\"game\",\"requestId\":\"" + JsonEscape(job.Id) +
-            "\",\"itemId\":\"" + JsonEscape(job.ItemId) +
-            "\",\"state\":\"" + JsonEscape(job.State) +
-            "\",\"requested\":" + job.Requested +
-            ",\"spawned\":" + job.Spawned +
-            ",\"err\":\"" + JsonEscape(job.Error) + "\"}";
+        lock (QueueGate)
+        {
+            return "{\"ok\":" + (job.State == "rejected" ? "false" : "true") +
+                ",\"mode\":\"game\",\"requestId\":\"" + JsonEscape(job.Id) +
+                "\",\"itemId\":\"" + JsonEscape(job.ItemId) +
+                "\",\"state\":\"" + JsonEscape(job.State) +
+                "\",\"requested\":" + job.Requested +
+                ",\"spawned\":" + job.Spawned +
+                ",\"err\":\"" + JsonEscape(job.Error) + "\"}";
+        }
     }
 
     private static bool TrySpawnOne(string stableId, out string error)
