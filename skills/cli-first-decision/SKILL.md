@@ -284,14 +284,14 @@ GitHub 和 Context7 插件不是本技能的依赖，也不得假设它们已安
 - 为单文件小改启动子智能体。
 - 为形式上的“全并行”制造额外调用。
 
-## 10. PTC TypeScript SDK 编排
+## 10. DSH PTC：run_code 与运行时 SDK 编排
 
 ### 10.1 默认使用方式
 
-当当前 DSH 会话运行在 PTC preset，且提示上下文提供 `tools:sdk` 与 `run_code` 时，多步骤工具任务优先使用 PTC SDK 编写一个 TypeScript 程序组合，而不是把每个子步骤拆成多轮模型工具调用。
+当当前 DSH 会话启用 PTC，且提示上下文提供 `run_code` 与 `tools:sdk` 时，多步骤工具任务可优先用 PTC 编排。**程序语言必须服从当前加载的 `ctx.ptcRuntime.language` 及注入的 SDK 指令**：TypeScript runtime 使用 TypeScript；Python runtime 使用 Python；不要把以下 TypeScript 示例复制到 Python runtime。
 
-- `run_code` 是 PTC 程序的传输入口。
-- `tools:sdk` 是运行时根据当前 agent 可见工具注册表生成的类型化 SDK。
+- `run_code` 是 PTC 程序的模型调用入口；以当前 schema 要求传入 `code`、`description` 等字段，不猜测可选参数。程序体语法由当前 runtime 的 instructions 决定。
+- `tools:sdk` 是运行时根据当前 agent 可见工具注册表、策略与 `ctx.ptcRuntime.language` 生成的程序内 SDK。
 - 在程序中通过 `tools.<工具名>(args)` 调用 SDK 中实际提供的绑定。
 - 工具名、参数和返回类型必须以当前会话注入的 SDK 定义为准；不得从其他项目、旧版本或记忆中猜测。
 - PTC-only 模式下，不要绕过 `run_code` 直接调用具名工具；应通过 SDK 绑定进入工具执行流水线。
@@ -318,7 +318,7 @@ GitHub 和 Context7 插件不是本技能的依赖，也不得假设它们已安
 
 先读取当前会话的 `tools:sdk`，确认每个绑定的真实名称、参数、返回类型和可见性，再写程序。
 
-示例仅演示结构，假设当前 SDK 确实提供 `tools.read_file({ path })`，并且对应参数被调度器判定为可并发：
+以下只是 **TypeScript runtime** 的结构示例；只有当前 `tools:sdk` 明确生成 TypeScript 声明时才使用。`read_file` 不是 DSH 固定工具名，必须换成当前 SDK 实际生成的绑定。Python runtime 应按注入的 Python instructions 写程序，不得直接照抄本例：
 
 ~~~~ts
 const paths = [
@@ -343,7 +343,7 @@ return contents.map((content, index) => ({
 
 ### 10.4 并发语义
 
-`Promise.all` 表示程序发起并发意图，不代表所有子调用都会并行执行：
+`Promise.all` 表示程序发起并发意图，不代表所有子调用都会并行执行；其中一个调用 reject 会使整个聚合 Promise reject，外层程序失败后 DSH 会取消并 drain 尚未完成的绑定。若必须保留成功分支结果，使用 `Promise.allSettled` 或对每项绑定调用单独 `try/catch`，再分别处理成功/失败结果：
 
 - 只有工具对当前参数明确被标记为 concurrency-safe，才允许实际重叠执行。
 - `isConcurrencySafe(args)` 必须明确返回 `true` 才能进入 parallel；未声明、未知、非法或判断异常均按 exclusive 处理。
@@ -354,7 +354,7 @@ return contents.map((content, index) => ({
 ### 10.5 结果与上下文
 
 - 子调用的中间值保留在 PTC 程序内。
-- 只有程序外层 logs 和 return value 返回模型上下文。
+- 通常只有程序外层 logs 和 return value 进入模型上下文。**例外**：成功的图像子调用及工具返回的 `additionalContexts` 可由 dispatcher 独立转发为延迟附加上下文，不一定包含在外层 return/log 中；它们仍消耗模型上下文预算，应把大型图像/附加内容纳入总上下文成本评估。
 - 程序内完成筛选、映射、聚合，只返回决策所需字段。
 - 不要把大文件、完整搜索结果或重复原始输出全部 return。
 - 需要审计的工具操作仍经过完整工具流水线；不要把“中间结果不进上下文”误解为“没有执行记录”。
@@ -363,6 +363,7 @@ return contents.map((content, index) => ({
 
 - SDK 绑定调用失败会在程序内表现为 `ToolCallError`；可捕获并读取 `toolName` 定位具体失败工具。
 - PTC 程序自身运行失败会作为结构化 `CODE_RUN_FAILED` 结果返回，检查具体错误后再调整程序。
+- `Promise.all` 任一 binding reject 时，聚合结果整体 reject；未捕获时 DSH 会取消并 drain 尚未完成的绑定。需要保存已成功分支时，在可能失败的扇出中使用 `Promise.allSettled` 或逐项捕获，先整理每项成功/失败，再决定是否让程序整体失败。
 - 一个绑定调用失败不代表此前的普通副作用已回滚；不要假设 PTC 提供事务。
 - 程序结束/失败时，运行时会取消并 drain 未完成的绑定调用，但已经产生的外部副作用仍需按工具语义处理。
 - 对写入、提交、发布、删除等非幂等操作，先完成只读预检；将可并行的只读部分与写入阶段分开；失败后先检查实际状态，不盲目重跑。
@@ -370,7 +371,7 @@ return contents.map((content, index) => ({
 
 ### 10.7 运行时安全边界
 
-PTC 的 TypeScript worker 提供程序执行隔离和资源控制，但不能仅凭 worker-thread 推断其具备 OS 级文件、网络或进程沙箱能力。通过当前 SDK 绑定调用工具，并遵守工具权限、审批和 sandbox 策略；不要通过程序直接访问 Node API 或子进程来绕过宿主工具边界。
+Node PTC provider 按所选模式执行 TypeScript；sandbox 能力由实际 provider/宿主策略决定。Python experimental provider 的执行与隔离边界也不能直接套用 Node 结论。不能仅凭 runtime 语言、VM/REPL context 或 worker 线程推断已具备 OS 级文件、网络或进程沙箱能力。通过当前 SDK 绑定调用工具，并遵守工具权限、审批和 sandbox 策略；不要通过程序直接访问 Node API 或子进程来绕过宿主工具边界。
 ## 11. 计划与子智能体
 
 ### 何时写计划
