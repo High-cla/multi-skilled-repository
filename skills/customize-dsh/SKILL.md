@@ -1,6 +1,6 @@
 ---
 name: customize-dsh
-description: 仅当用户要编辑或创建 DeepSeek Harness（DSH）自身配置或扩展时使用：settings.yaml（默认模型/权限预设/主题）、profiles/*/cordis.patch.yml 与 package.json（dsh.profile.bundles）、技能创作与修复（~/.dsh/skills、~/.agents/skills、项目 .dsh/skills，含技能不生效/嵌套目录问题）、agent preset（~/.dsh/.agent-presets）、MCP server（dsh-mcp-client）、cordis 插件包、自定义工具、slash 命令、DSH 启动失败或 patch 解析报错诊断。纯解释/查看类提问不需要；非 DSH 的插件、技能、MCP（如 opencode、codewhale、通用 MCP server 开发）不触发。用户说"改 DSH 配置""加技能""配 MCP""改默认模型""改权限预设""改某条目配置""改 profile""装/卸 DSH 插件""DSH 启动失败""patch 报错"时使用。
+description: 仅当用户要编辑或创建 DeepSeek Harness（DSH）自身配置或扩展时使用：settings.yaml（默认模型/权限预设/主题）、profiles/*/cordis.patch.yml 与 package.json（dsh.profile.bundles）、技能创作与修复（~/.dsh/skills、~/.agents/skills、项目 .dsh/skills，含技能不生效/嵌套目录问题）、Agent preset（@deepseek-ai/dsh-agent-preset；旧式 ~/.dsh/.agent-presets 迁移）、MCP server（dsh-mcp-client）、cordis 插件包、自定义工具、slash 命令、DSH 启动失败或 patch 解析报错诊断。纯解释/查看类提问不需要；非 DSH 的插件、技能、MCP（如 opencode、codewhale、通用 MCP server 开发）不触发。用户说"改 DSH 配置""加技能""配 MCP""改默认模型""改权限预设""改某条目配置""改 profile""装/卸 DSH 插件""DSH 启动失败""patch 报错"时使用。
 ---
 
 # 定制 DeepSeek Harness — customize-dsh
@@ -12,6 +12,7 @@ DSH 是"万物皆可插件"的宿主：配置严格校验，格式错误会导�
 定制前先查权威资料，不要凭记忆猜字段：
 
 - **配置目录（所有包的可配字段与默认值）**：<https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/config-catalog.md>（按 `@deepseek-ai/dsh-*` 包分节）
+- **权威来源索引（推荐先读）**：[`references/AUTHORITATIVE-SOURCES.md`](references/AUTHORITATIVE-SOURCES.md)，包含配置、profile/HMR、settings/volatile、skills、agent preset、MCP、tools 的官方文档和源码入口，以及当前上游已核验的默认值差异。
 - **profile / patch / bundle 分层**：`packages/boot/app-boot/README.md#Profiles`、`apps/cli/reference/README.zh.md`
 - **子系统文档（中文）**：<https://github.com/deepseek-ai/deepseek-harness/tree/master/docs/subsystems>（settings、skills、tools、permission-presets、system-prompt、approval、sandbox、agent-lifecycle）
 - **组合与 HMR**：`docs/cordis-tutorial/06-composition-and-hmr.zh.md`
@@ -19,23 +20,25 @@ DSH 是"万物皆可插件"的宿主：配置严格校验，格式错误会导�
 - **cookbook**：`docs/cookbook/`（adding-a-tool、adding-a-package、extension-cookbook）
 - **agent preset**：`packages/preset/agent-presets/README.zh.md`
 
-若字段未在此 skill 说明或需确认精确形状，**抓取上述文档阅读原文**，不要猜测。
+若字段未在此 skill 说明或需确认精确形状，**抓取上述文档阅读原文**，不要猜测。Context7 当前可用时，先 resolve `/deepseek-ai/deepseek-harness`，再针对单一配置主题查询；仍需回到对应版本官方原始文档、生成 config catalog 和源码核对。
 
 ## 使配置生效（热重载 vs 重启）
 
-- **cordis.yml / patch 层**：HMR。`cordis-plugin-hmr` 监视文件，保存时按 entry `id` 对比、事务式重应用（卸载旧实例→加载新实例），`!!js` 表达式在仍运行的服务基础上重算。
-- **settings.yaml**：`watch` 热发布（默认开启）。`live` owner 立即生效；`restart` owner 只在构造期读一次。改动后通常无需重启。
-- **技能**：文件系统 watcher 监听技能目录，`skills/change` 事件使目录失效；模型侧目录在 digest 变化时自动替换，改完下一轮即生效。
-- **agent preset 默认值**：热设置只影响**此后创建**的会话；已运行会话停在原 preset。
-- **需重启**：修改 profile `package.json` 的 `dsh.profile.bundles` 列表（用 `dsh plugin` 走重调和安装）、改 bundle 的 patch 声明。
-- **运行时通道**：动态 cordis 插件（`cordis_define`/`cordis_run`/`cordis_stop`/`cordis_undefine`）与本机 dsh-super-injector（`dev_inject_plugin`/`dev_install_package`/`dev_reload_package`/`dev_uninject_plugin` 等 dev_* 工具）可免重启注入/热重载/卸载即净。
+不要把“保存文件”一概等同于 HMR：是否热重载由当前 profile 的组合配置决定。上游 `app-boot` 文档明确说明，随附 `web` profile 启用 live reload；`headless`、`sdk`、`sdk-minimal`、`acp` 等模板在启动时应用 patch，修改后需要重启。
+
+- **cordis.patch.yml / `!!js`**：只有组合树挂载了 `@deepseek-ai/dsh-hmr`（或相应 HMR provider）时，文件变更才会触发按 entry `id` 的卸载、重载或重新配置；`!!js` 也只有在实际 Loader 求值时才生效。先用 `dsh --profile <name> --dump-config` 查看最终组合，再确认 HMR entry 是否存在。
+- **settings / volatile Config**：不是所有 `settings.yaml` 字段都会热更新。插件必须把字段声明为 `volatile` 并按其 API 读取；`.get()` 取得当前值，消费者通过 `loader/volatile-update` 等机制响应变化。`ctx.settings.update/replace/mutate` 是配置表单编辑 API，按 profile entry id 操作，并带可选 revision 冲突检查；不能据此推断任意文件编辑都实时生效。
+- **技能**：本地 filesystem provider 默认 watch roots。新增、重命名、删除技能或修改 frontmatter 会使下一次 catalog lookup 更新；技能正文在每次 `get()` 时重新读取，因此正文修改无需 catalog cache invalidation。`references/`、`scripts/`、`assets/` 等资源文件变更本身不会触发技能目录 catalog refresh。
+- **agent preset**：默认 preset 选择影响后续新建会话；已运行会话不会因修改默认值自动切换。切换 preset 有空白会话等限制，需按当前 preset subsystem 文档核验。
+- **bundle 列表**：修改 profile manifest 的 `dsh.profile.bundles` 会改变安装/组合结构，使用 `dsh plugin --profile <name> add/remove` 管理依赖，并按 CLI 输出完成安装与重启。
+- **运行时注入**：`cordis_define` / `cordis_run` 等动态 Cordis 工具、`dsh-super-injector` 的 `dev_*` 工具仅在相应插件、工具和权限实际挂载时可用；不可把开发注入通道当作每个 DSH profile 的内置能力。
 
 ## 文件存放位置
 
 | 范围 | 路径 |
 |------|------|
 | Harness home | `$DSH_HOME`，缺省 `~/.dsh` |
-| 用户设置 | `$DSH_HOME/settings.yaml`（也可 .yml/.json） |
+| 旧版设置导入文件 | `$DSH_HOME/settings.yaml`（仅在兼容迁移场景核验；当前 Settings 文档说明旧文件只导入一次并改名为 `settings.yaml.imported`） |
 | home 级 patch（所有 profile 共享，优先于 profile 层） | `$DSH_HOME/cordis.patch.yml` |
 | 用户凭据 | `$DSH_HOME/.credentials.yaml` |
 | 用户环境层 | `$DSH_HOME/.env`（优先级低于继承环境与调用目录 .env） |
@@ -47,38 +50,23 @@ DSH 是"万物皆可插件"的宿主：配置严格校验，格式错误会导�
 | 用户技能 | `$DSH_HOME/skills`（rank 400） |
 | 用户 agents 技能 | `<agentsHome>/skills`（rank 500） |
 | 随包技能 | `Config.bundledSkillDir`（rank 600） |
-| agent preset | `$DSH_HOME/.agent-presets/<id>/`（agent.cordis.yml + 可选 preset.yml + plugins/） |
+| Agent preset | 当前通过 profile composition 中的 `@deepseek-ai/dsh-agent-preset` entry 声明；旧式 `$DSH_HOME/.agent-presets/<id>/` 目录不再读取 |
 
 项目根目录 = 最近的含 `.git` 的祖先目录；找不到时用 cwd。技能本地提供方跳过 `$DSH_HOME` 的 `.system` 子目录。
 
-## settings.yaml
+## Settings 与旧版 settings.yaml 迁移
 
-顶级键 = 已注册 namespace 名。每个 namespace 解析为 `schema 默认值 → 注册方组合 base → 用户分节`。本机实例的真实形状：
+**不要把 `$DSH_HOME/settings.yaml` 当作当前通用配置数据库或实时配置文件。** 当前上游 Settings package 文档说明：早期版本遗留的 `settings.yaml` 会在 Settings 启动后、Loader 完成条目加载时导入一次；成功处理后文件改名为 `settings.yaml.imported`。不应把它当作当前推荐写入位置。
 
-```yaml
-agent-presets:
-  default: mcp-opt          # 默认 agent preset 名（影响此后创建的会话）
-permission:
-  defaultPreset: danger-full-access   # 权限预设：workspace-write | danger-full-access
-ui-theme:
-  preference: dark
-ui-conversation:
-  busyEnter: steer
-agent-default-model:
-  provider: opencode-go
-  model: deepseek-v4-flash
-  reasoningEffort: max
-llm-pi-ai:
-  providers:
-    <provider-id>:
-      models: [{ id, name, contextWindow, maxTokens }]
-      apiKeyEnv: <环境变量名>
-      # 自定义 provider 可加：displayName / api: openai-completions / baseURL
-```
+当前配置编辑边界：
 
-- 外部编辑经 `ctx.settings` 热发布；更新在写锁下先重读再原子写回，保留注释与未加载插件拥有的分节
-- 启动时存在但**非法**的文档使插件加载失败；运行中不可读/不可解析的编辑只告警并保留最后可用分节
-- provider 的 `apiKeyEnv` 指向环境变量而非明文密钥；凭据解析顺序：继承环境 → `.credentials.yaml` → 调用目录 .env → `$DSH_HOME/.env`
+- 普通插件 Config 通过 profile 的 `cordis.patch.yml`、home patch 或 `--patch` overlay 配置；后应用层优先。
+- `ctx.settings` 表单只投影插件 Config 中声明为 `.volatile()` 的字段，并按 profile entry id 定位插件实例。
+- `ctx.settings.update(ns, patch, expectedRevision)` 合并字段；`replace` 重置该 entry 的 volatile 字段后应用新值；`mutate` 按路径编辑并可保留客户端未收到的秘密字段。revision 用于拒绝过期写入。
+- 业务插件通过 Config 引用的 `.get()` 读取 volatile 值，并按 `loader/volatile-update` 等机制响应更新。普通字段不是 volatile，不能据此承诺热更新。
+- Secrets 应使用凭据服务/credential reference 或环境变量引用；不要把明文密钥写入技能示例、patch、日志或聊天回复。
+
+需要确认字段时，查当前版本的生成 config catalog 和 [Settings 子系统文档](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/settings.zh.md)，不要根据旧的本机示例猜测 namespace 或字段默认值。
 
 ## Profiles 与 patch 层
 
@@ -102,7 +90,7 @@ llm-pi-ai:
 ```yaml
 # 1) insert：追加 entry
 - insert:
-    - id: mcp-fastctx            # 行 id（全局唯一；重复会冲突）
+    - id: mcp-fastctx            # 行 id；同一组合树中应保持稳定且唯一
       name: '@deepseek-ai/dsh-mcp-client'   # 插件包名/相对路径
       config:                    # 插件配置（随插件 schema 而异）
         serverName: fastctx
@@ -111,14 +99,15 @@ llm-pi-ai:
         args: ['serve']
         env: { KEY: '1' }
         cwd: !!js process.cwd()  # !!js 表达式在挂载时求值
-        toolCallTimeoutMs: 300000
+        # toolCallTimeoutMs 默认 60000 ms；需要时再显式覆盖
 # 2) id-targeted：命中 id 即【替换该 entry 的整份 config】——无深度合并，
 #    必须重述要保留的所有字段
 - id: some-plugin-id
   name: '@deepseek-ai/dsh-xxx'
   config: { ... }
-# 3) disable：卸载 entry 但不删除
-- disable: { id: some-plugin-id }
+# 3) disabled：保留 entry，但不挂载
+- id: some-plugin-id
+  disabled: true
 ```
 
 **校验与失败规则**：
@@ -133,7 +122,7 @@ llm-pi-ai:
 
 ## Skills（技能创作）
 
-技能加载器扫描技能目录的**直接**条目：目录包 `<name>/SKILL.md` 或扁平文件 `<name>.md`（`**/SKILL.md` 递归**不支持**）。
+本地 filesystem skill provider 扫描技能根目录的**直接**条目：目录包 `<name>/SKILL.md` 或扁平文件 `<name>.md`（不会递归发现任意深度的 `**/SKILL.md`）。注意 `ctx.skills` 本身是 provider registry，也可由远程或内嵌 provider 提供技能；以下路径与发现规则仅描述随附的本地 filesystem provider。
 
 ```markdown
 ---
@@ -149,28 +138,41 @@ user-invocable: true              # 可选，默认 true
 ```
 
 - `name` 必填，kebab-case（`^[a-z0-9]+(?:-[a-z0-9]+)*$`），与目录名一致
-- `description` 几乎必填：无 description 的 skill 被过滤。目录只展示 name+description（正文不进目录），description 默认上限 500 字符
+- `description` 必填：无效或缺失的 description 会使该 skill 被跳过。模型目录展示摘要而非完整正文；description 长度上限和解析规则以当前 skill-filesystem 配置/源码为准，不要依赖硬编码的 500 字符常量
 - 重名裁决：rank 低者赢，再按提供方顺序、本地顺序；最近 scope 层条目直接压过全局层
 - `skill` 工具加载后返回 `<skill_content>`、`<skill_resources>`、`<skill_instructions>`；资源（scripts/references/assets）按需解析，不枚举目录
 - 本环境技能库在 `~/.agents/skills/`（user-agents 层），与 `customize-opencode`、`skill-creator` 等并列
 
 ## Agent presets
 
-`$DSH_HOME/.agent-presets/<id>/` 下存放 preset：
+先区分两种容易混淆的概念：
 
-```
-agent.cordis.yml   # 插件行顶层列表（必填，preset 的组合）
-preset.yml         # 可选展示元信息：只有 name/description；id=目录名、trust 来自根，不可写
-plugins/           # preset 自带插件（相对路径从 preset 目录解析）
+1. **当前 Cordis Agent preset**：由 `@deepseek-ai/dsh-agent-preset` 声明，通常作为 profile composition 中的一条插件 entry。其 `config.id` 是会话保存的 preset identity，entry 自身的 `id` 是 Loader patch 定位键；`config.plugins` 是 Agent 子插件列表。修改声明只影响之后创建的 Agent，不会自动改写已有会话。
+2. **旧式目录 preset**：`$DSH_HOME/.agent-presets/<id>/` 下的 `preset.yml` + `agent.cordis.yml` 是旧格式。当前上游已不再读取这种目录；不要把旧目录当成当前 preset 的生效来源，也不要只修改旧目录来尝试修复 preset。
+
+当前 Cordis 声明形态（字段以已安装版本的 config catalog 为准）：
+
+```yaml
+- id: agent-preset-registry
+  name: '@deepseek-ai/dsh-agent-preset-registry'
+  config:
+    default: standard
+- id: preset-standard
+  name: '@deepseek-ai/dsh-agent-preset'
+  config:
+    id: standard
+    plugins:
+      - id: child-tool
+        name: '@deepseek-ai/example-plugin'
+        config: {}
 ```
 
-- 目录名必须是合法 preset id（`[a-z0-9][a-z0-9-]*`），否则跳过；损坏（YAML 无法解析/非具名插件行列表）以 `broken` 原因列出而非跳过
-- 常驻挂载（standing mount）每个进程只一次；加入的会话共享一份工具/提示词/投影，插件按 Session/Agent 键控状态
-- 视角解析顺序 `agent → preset → global`（近者遮蔽远者）
-- `settings.yaml` 的 `agent-presets.default` 选择默认 preset；`roots`/`includeUserRoot` 可配置（缺省追加 `$DSH_HOME/.agent-presets` 为 user 根）
-- **切换限制**：preset 只能在"尚未产生任何内容的空白会话"上切换（`recompose`）；默认值只影响此后创建的会话；preset 文件是输入而非持久化目标（loader 不写回）
-- 创作是 copy-only：`ctx.agentPresets.copy()` 从现有 preset 整目录复制；`remove()` 只删 user 根下的 preset
-- preset 的权限 = 它引用的插件的权限（trust 只用于展示 system/user 差异，不强制隔离）
+- entry 的 `id` 与 `config.id` 不是同一个标识；不要互换。
+- `plugins` 是 Cordis 子 entry 列表，子插件仍受 Loader dependency、schema、scope 和 lifecycle 规则约束。
+- 随包的 `@deepseek-ai/dsh-agent-preset` README 说明声明会提前加载，变更影响随后创建的 Agent；已有 Agent composition 保持稳定。
+- `@deepseek-ai/dsh-agent-preset-registry` 的 `config.default` 是部署默认 preset；其 volatile 字段 `selectedDefault` 保存用户默认值，新会话在未显式指定 preset 时优先使用用户默认值。不要沿用已废弃的 `modeSelectionEnabled` 配置，也不要把默认值变更解释为现有会话自动切换。
+- 如需新增或复制 preset，优先使用当前 Web UI/Agent Preset 管理能力；若通过运行时 API 或工具操作，先从当前环境的 API/工具 schema 确认可用方法（例如 `agentPresets` service），不要假设旧版 `copy/remove` 或文件系统布局仍可用。
+- preset plugin row 的配置 patch 遵循普通 Cordis patch 语义：按 entry id 定位，整份替换 config 时重述完整 `plugins` 列表；不要直接编辑随包安装目录中的 shipped composition。
 
 ## 插件（cordis package）与自定义工具
 
@@ -206,19 +208,19 @@ export function apply(ctx: Context) {
 - **Code Mode**：`tools` 插件 config 的 `mode: 'native' | 'code' | 'both'`（`both` 下模型可写 TS/Python 程序经 `run_code` 触达全部工具；`run_code` 是保留名）；工具错误类型 `ToolArgsError`/`ToolOutputError`/`ToolNotFoundError`
 - 插件可配 Config 用 `@deepseek-ai/schemastery` 的 `Schema.object(...)` 导出 `Config`（不要导出普通对象）；**无效配置在加载时失败并给出明确错误**；约定：不同部署可能需要不同值的参数都必须定义为配置字段
 - **挂载通道**：① `dsh.profile.bundles`（随 profile 启动）② `cordis.patch.yml` 的 insert（HMR 热生效）③ 运行时注入（super-injector dev_* 工具，免重启）④ 动态 cordis（`cordis_define`/`cordis_run`，会话级）
-- 工具注册表分层：宿主行与 repository 插件落 GLOBAL 层，preset 挂载落该 preset 层；MCP 桥接工具以 `mcp__<serverName>__<tool>` 出现在 GLOBAL 层
+- 工具注册表按 scope 分层；MCP 工具名为 `mcp__<serverName>__<tool>`，实际可见范围取决于 MCP client 所挂载的注册作用域，不应一概描述为 GLOBAL
 
 ## MCP servers
 
-通过 `cordis.patch.yml` 插入 `@deepseek-ai/dsh-mcp-client` 行（见"Profiles 与 patch 层"示例）。关键配置键：
+通过 `cordis.patch.yml` 插入 `@deepseek-ai/dsh-mcp-client` 行（见"Profiles 与 patch 层"示例）。当前上游默认值以 [MCP client README](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/mcp/mcp-client/README.zh.md) 和生成的 config catalog 为准。关键配置键：
 
-- `serverName`：桥接名，工具前缀 `mcp__<serverName>__<工具原始名>`；须匹配 `[A-Za-z0-9_-]{1,32}` 且在存活 mcp-client 实例间唯一
+- `serverName`：桥接名，工具前缀 `mcp__<serverName>__<工具原始名>`；须匹配 `[A-Za-z0-9_-]{1,32}`，在同一注册作用域内唯一；独立 agent scope 可隔离复用
 - `transport`：`stdio` | `streamable-http`（官方只有这两种，没有 `remote`）
-- `command` + `args`：stdio 模式的可执行与参数（用绝对路径，避免 .cmd shim/npx 网络检查）
+- `command` + `args`：stdio 模式的可执行与参数。生产部署优先使用可预测的可执行路径并固定包版本；`npx` 可能触发包解析/网络安装，不应在未评估可重复性时作为生产默认。
 - `env`：传给服务器的环境变量；`cwd`：工作目录（常用 `!!js process.cwd()`）
-- `toolCallTimeoutMs`：工具调用超时（慢服务器如 LSP/代码索引建议 300000）
+- `toolCallTimeoutMs`：每次 MCP `tools/call` 或资源请求的超时，当前默认 **60000 ms**；只有确认目标服务器确实需要更长时间时才提高。
+- `failOnStartupError`：初始连接或工具同步失败时是否拒绝插件激活，当前默认 **false**；默认情况下 DSH 可继续启动，但该服务器工具不会出现并会记录错误。若服务为关键依赖，再显式设为 `true`。
 - 远程（streamable-http）：`url` + 可选 `headers`
-- `failOnStartupError`：初始连接或工具同步失败时插件激活失败（默认行为是失败）
 
 ## 权限与沙箱
 
