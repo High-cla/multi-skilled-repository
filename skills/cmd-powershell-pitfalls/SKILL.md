@@ -5,25 +5,20 @@ description: "Windows CMD 和 PowerShell 错误排查与陷阱规避指南，含
 
 # CMD + PowerShell 混合脚本避坑指南
 
-## 1. 编码 (Code Page)
 
-### `chcp 65001` 破坏变量展开
+## 1. 编码与代码页
 
-```batch
-@echo off
-chcp 65001 >nul
-set "VAR=中文路径"
-echo %VAR%   REM 可能输出乱码或空 — 65001 下 cmd 解析异常
-```
+`chcp` 只改变当前控制台的活动代码页，不会改变 CMD 的变量展开规则、PowerShell 文件编码或所有子进程的编码。不要把 `chcp 65001` 描述成会破坏 `%VAR%` 展开，也不要假设所有系统默认都是 936/GBK。
 
 **规则：**
-- `chcp 65001` 后 cmd 对 `%VAR%` 的解析在某些 Windows 版本有 bug，尤其是路径含中文时
-- 修复：不在 cmd 中用中文注释/输出，改用英文；或保持默认 936 (GBK)
-- 最佳实践：批处理脚本避免中文字符，使用英文
+- 区分控制台输入/输出代码页、PowerShell 的 `Console.InputEncoding` / `Console.OutputEncoding`、发给原生程序的 `$OutputEncoding`，以及文件读写的 `-Encoding`；它们不是同一个设置。
+- 编码问题通常表现为乱码、替换字符或字节损坏，不应归因于 CMD 的变量展开机制。
+- 文件读写在边界显式指定编码；先确认目标程序实际支持 UTF-8、BOM 和代码页。
+- 不要为了避免乱码而强制把脚本、参数或数据改成英文；应使用明确且兼容的编码。
 
 ## 2. `for` 循环体中的括号 `)`
 
-`for` 的 `()` 体用 `)` 关闭。如果命令本身含 `)`，必须用 `^` 转义。
+`for` 的括号块由未转义的 `)` 结束。在括号块内，只有当右括号会被 CMD 解析为块结束符时才需要写成 `^)`；不要把所有字符串中的右括号都机械替换。
 
 ```batch
 REM 错误
@@ -37,7 +32,7 @@ for %%f in (*.lua) do (
 )
 ```
 
-**规则：** `for` 循环体内任何 `)` 都必须写作 `^)`。
+**规则：** 对 CMD 解析器会识别为块结束符的右括号使用 `^)`；能用引号或拆分命令避免复杂解析时，优先简化结构。
 
 ## 3. 括号引起的重定向顺序问题
 
@@ -90,13 +85,19 @@ REM 正确：用单引号
 powershell -Command "Write-Host 'hello'"
 ```
 
-## 7. `Get-Location` 返回 `PathInfo` 非字符串
+
+## 7. 路径对象与路径拼接
+
+`Get-Location` 返回 `PathInfo`。需要构造路径时使用路径 API，而不是依赖对象与字符串的隐式转换：
 
 ```powershell
-$d = Get-Location               # PathInfo 对象
-$d + "\file.lua"                 # 错误
-$d.Path + "\file.lua"            # 正确
+$dir = (Get-Location).Path
+$file = Join-Path $dir 'file.lua'
+# 或
+$file = Join-Path (Get-Location) 'file.lua'
 ```
+
+**规则：** 优先 `Join-Path`、`Resolve-Path` 和 `[IO.Path]::Combine()`；不要手工拼接路径分隔符。
 
 ## 8. cmd 中 `$` 与 `%` 传递给 PowerShell
 
@@ -132,10 +133,12 @@ REM 正确：| 在 "..." 内不会被 cmd 当作管道
 powershell -Command "Get-ChildItem | Where-Object { $_.Length -gt 1kb }"
 ```
 
+
 ## 12. 延迟变量扩展 (Delayed Expansion)
 
 ```batch
-setlocal enabledelayedexpansion
+@echo off
+setlocal EnableDelayedExpansion
 set "count=0"
 for %%f in (*.lua) do (
   set /a count+=1
@@ -144,30 +147,51 @@ for %%f in (*.lua) do (
 endlocal
 ```
 
-**规则：** `for`/`if` 内修改并读取变量必须用 `!var!`。
+**规则：**
+- CMD 在解析括号块时会提前展开 `%var%`；需要读取块内更新后的值时，才启用延迟展开并用 `!var!`。
+- 延迟展开会把文件名/数据中的字面 `!` 当成展开边界，可能损坏内容。处理任意文件名时，优先禁用延迟展开、拆分代码块或改用 PowerShell。
+
 
 ## 13. `Set-Content` 编码陷阱
 
-```powershell
-# Windows PowerShell (<= 5.1)：默认 UTF-8 With BOM
-Set-Content path "text"               # UTF-8 + BOM
-Set-Content path "text" -Encoding ASCII   # ASCII（无BOM）
+Windows PowerShell 5.1 与 PowerShell 7+ 的默认值不同，而且 Windows PowerShell 5.1 的不同 cmdlet 默认编码并不统一。
 
-# PowerShell 7+：默认 UTF-8 No BOM
-Set-Content path "text"               # UTF-8 No BOM
+```powershell
+# Windows PowerShell 5.1：Set-Content 默认使用系统活动代码页
+Set-Content -Path .\out.txt -Value 'text'
+
+# Windows PowerShell 5.1：-Encoding UTF8 会写入 UTF-8 BOM
+Set-Content -Path .\out.txt -Value 'text' -Encoding UTF8
+
+# PowerShell 7+：默认 UTF-8 No BOM；也可显式指定
+Set-Content -Path .\out.txt -Value 'text' -Encoding utf8NoBOM
+
+# 需要在 Windows PowerShell 5.1 写 UTF-8 No BOM 时
+[IO.File]::WriteAllText(
+  '.\out.txt',
+  'text',
+  [Text.UTF8Encoding]::new($false)
+)
 ```
+
+**规则：** 明确目标版本和文件格式；不要把 Windows PowerShell 5.1 的 `Set-Content` 默认值说成 UTF-8 BOM。覆盖文件、追加文件和重定向运算符也要分别查对应 cmdlet 的编码规则。
+
 
 ## 14. 错误处理
 
 ```batch
 some_command
-if %ERRORLEVEL% neq 0 (
-  echo Failed with code %ERRORLEVEL%
-  exit /b %ERRORLEVEL%
+if errorlevel 1 (
+  echo Command failed
+  exit /b 1
 )
 ```
 
-**规则：** cmd 用 `%ERRORLEVEL%`，PowerShell 用 `$LASTEXITCODE`。
+**规则：**
+- CMD 中 `if errorlevel N` 表示退出码大于或等于 N；它适合常见的正数失败码判断。
+- 在括号块中，`%ERRORLEVEL%` 会在块解析时展开，可能读到旧值；需要当前值时使用适当的延迟展开，或把判断拆到块外。
+- PowerShell 中，`$LASTEXITCODE` 用于最近的原生程序退出码；PowerShell cmdlet 的成功/失败还要检查 `$?`、错误记录或 `-ErrorAction Stop`。
+- 跨 CMD/PowerShell 边界时，显式使用 `exit <code>` 将需要传播的状态传回调用方。
 
 ## 15. 逐 `>>` 追加 vs 一次性重定向
 
@@ -201,38 +225,60 @@ REM 正确：第一行就是 @echo off
 echo starting...
 ```
 
-## 19. PowerShell 执行策略绕过
 
-```batch
-powershell -ExecutionPolicy Bypass -File script.ps1
+## 19. PowerShell 执行策略
+
+不要把 `-ExecutionPolicy Bypass` 作为每个脚本的默认启动参数，也不要把它描述成保证脚本可执行的通用修复。
+
+```powershell
+# 先检查有效策略及其作用域
+Get-ExecutionPolicy -List
+Get-ExecutionPolicy
 ```
 
-## 20. 特殊字符转义表
+**规则：**
+- 优先遵守机器/组织策略，确认脚本来源、签名和信任状态。
+- Execution Policy 是纵深防御机制，不是安全边界；它也不能覆盖 Group Policy 设置的 `MachinePolicy` / `UserPolicy`。
+- 只有在用户/管理员明确授权、且不违反组织策略时，才考虑对单次进程使用临时策略；不要永久放宽 `CurrentUser` 或 `LocalMachine`。
+- `Bypass` 会取消阻止、警告和提示；不能用它绕过安全审查或执行未知脚本。
 
-| 字符 | cmd 转义 | PowerShell 转义 |
-|------|----------|-----------------|
-| `^` | `^^` | `` `^ `` |
-| `&` | `^&` | `` `& `` |
-| `\|` | `^\|` | `` `\| `` |
-| `<`/`>` | `^<`/`^>` | `` `< ``/`` `> `` |
-| `"` | `\"` (无效) | 用单引号替代 |
-| `$` | `$$` | `` `$ `` |
-| `%` | `%%` | `` `% `` |
+
+## 20. CMD 与 PowerShell 的分层转义
+
+CMD 先解析外层命令行，PowerShell 再解析传入的脚本文本。不存在一张适用于所有嵌套层级的通用转义表。
+
+- CMD 中未被引号保护的 `&`、`|`、`<`、`>`、`^` 和括号等字符可能具有控制含义；`^` 的行为取决于所在解析层和引号状态。
+- 批处理文件中的 `%VAR%` 是 CMD 环境变量展开；`%%f` 是批处理文件中的 FOR 变量写法（交互式 CMD 通常写 `%f`）。
+- `$` 不是 CMD 环境变量展开符；不要用 `$$` 作为 CMD 的通用转义。
+- PowerShell 字符串使用 PowerShell 自己的单引号/双引号和反引号规则；双引号字符串会展开变量，单引号字符串是字面字符串。
+- 对复杂脚本，写入独立 `.ps1` 文件并使用明确参数传递，通常比嵌套多层引号可靠。
+
 
 ## 21. 路径含空格的处理
 
 ```batch
-set "path=C:\Program Files\app"
-cd "%path%"
+REM 不要使用 path 作为临时变量名；CMD 的环境变量名不区分大小写，
+REM path 与 PATH 相同，可能覆盖当前进程的搜索路径。
+set "appPath=C:\Program Files\app"
+cd /d "%appPath%"
 ```
+
+**规则：** 路径参数始终正确引用；临时变量使用 `appPath`、`targetDir` 等名称，不覆盖系统变量 `PATH`。
+
 
 ## 22. 环境变量作用域
 
-| 级别 | cmd | PowerShell |
-|------|-----|------------|
-| 当前进程 | `set VAR=val` | `$env:VAR = "val"` |
-| 用户永久 | `setx VAR val` | `[Environment]::SetEnvironmentVariable("VAR","val","User")` |
-| 系统永久 | `setx VAR val /M` | `[Environment]::SetEnvironmentVariable("VAR","val","Machine")` |
+| 级别 | CMD | PowerShell |
+|---|---|---|
+| 当前进程 | `set VAR=value` | `$env:VAR = 'value'` |
+| 用户永久 | `setx VAR value` | `[Environment]::SetEnvironmentVariable('VAR','value','User')` |
+| 系统永久 | `setx VAR value /M` | `[Environment]::SetEnvironmentVariable('VAR','value','Machine')` |
+
+**注意：**
+- `set` 和 `$env:` 只修改当前进程及其后代进程的环境。
+- `setx` 写入注册表，通常只影响之后启动的进程，不会更新当前 CMD/PowerShell 会话。
+- Microsoft 文档注明 `setx` 写入值有 1024 字符上限，超出可能被截断；它还会展开环境变量引用。不要用它不加检查地追加或重写长 `PATH`。
+- 系统级变量修改需要相应权限；除非用户明确要求，不要持久修改机器环境。
 
 ## 23. 数组与集合
 
@@ -252,86 +298,115 @@ WHERE id=1
 "@
 ```
 
-## 26. 后台执行
 
-```batch
-start /min powershell -WindowStyle Hidden -Command "..."
-```
+## 26. 后台执行与窗口可见性
+
+`start /min` 是最小化，不等于隐藏；`-WindowStyle Hidden` 则会隐藏进程窗口，不应作为常规后台执行方式。
+
+**规则：**
+- 长任务优先使用可观察的 job/process supervisor：保留 job id、状态、输出、退出码和取消能力。
+- 只有产品需求明确要求无窗口运行时，才使用隐藏窗口；同时仍需可审计的日志、退出状态和停止机制。
+- 无 TTY 环境下不要依赖交互式确认、前台输入或用户手动关闭窗口。
 
 ## 27. Unicode 与 BOM
 
 写文件时用 `UTF8Encoding($false)` 创建无 BOM 的 UTF-8。
 
-## 28. 管道编码传递
 
-cmd 管道默认 ANSI (GBK)，PowerShell 默认 UTF-8。跨管道传中文时优先让 PowerShell 全程处理。
+## 28. 管道数据流与编码传递
+
+不要笼统地说 CMD 管道固定使用 ANSI/GBK、PowerShell 管道固定使用 UTF-8。实际字节行为取决于 Windows 代码页、PowerShell 版本、控制台设置和目标原生程序。
+
+**规则：**
+- `chcp` 只更改控制台代码页；它不等同于文件编码，也不控制所有 PowerShell 到原生程序的管道编码。
+- Windows PowerShell 5.1 与 PowerShell 7+ 的文件输出、原生程序输入输出默认值不同；特别区分 `$OutputEncoding`（PowerShell 发往原生程序）与 `Console.OutputEncoding`（控制台）。
+- 跨进程传递文本时，优先使用明确的 UTF-8 文件/协议或能声明编码的接口；避免依赖当前机器的本地代码页。
+- 遇到乱码时先检查两端实际字节和编码，再调整代码页/编码参数。
 
 ## 29. 临时文件竞争条件
 
 并发场景下必须用唯一标识 (GUID/PID/时间戳)。
 
-## 30. 权限提升检测
 
-```batch
-net session >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    powershell -Command "Start-Process cmd -ArgumentList '/c','%~f0' -Verb RunAs"
-    exit /b
-)
-```
+## 30. 权限提升与 UAC
+
+不要在检测到非管理员后自动重启整份脚本并请求管理员权限。
+
+**规则：**
+- 默认以当前权限执行；先区分哪些具体操作确实需要管理员权限。
+- 需要提权时说明目标、影响范围和副作用，并取得用户明确授权；只提升必要的单个操作，不把整个工作流无条件提升。
+- `net session` 依赖 Server 服务状态，不适合作为所有 Windows 环境的通用管理员检测。
+- 对安全敏感的操作检查有效访问令牌/实际操作结果；不能把“用户属于 Administrators 组”简单等同于当前进程已提升。
+
 
 ## 31. 长路径支持 (>260 字符)
 
-Windows 10 1607+ 启用长路径支持或使用 `\\?\` 前缀。
+Windows 长路径支持不是只改一个注册表值就能让所有程序都支持。
+
+- Win32 长路径通常需要系统启用 `LongPathsEnabled`，并且应用程序 manifest 声明 `longPathAware`；旧程序仍可能受 `MAX_PATH` 限制。
+- `\\?\` 是面向支持它的 Win32 API 的路径前缀，不是所有 shell、CLI、库或相对路径都能通用使用。
+- 修改系统级注册表需要权限，并且不会让未适配的程序自动获得长路径能力。先确认调用链中的每个工具是否支持。
+
 
 ## 32. 超时与中断
 
-长时间运行命令必须设置超时机制。
-```powershell
-$p=[Diagnostics.Process]::Start('cmd','/c command'); if(!$p.WaitForExit(5000)){ $p.Kill(); exit 1 }
-```
+长任务应使用能够管理整个进程树的超时/取消机制。
+
+**规则：**
+- 仅对父进程调用 `Kill()` 可能留下孙进程；需要确认运行时是否支持整个进程树终止，并等待清理完成。
+- 超时应有明确 deadline、取消传播、退出码、标准输出/错误收集和清理结果。
+- 优先使用宿主任务管理器、FastCtx job、CI runner 或成熟 supervisor；不要把一个简单的 `WaitForExit` 示例当作跨版本可靠的进程树管理器。
+
 
 ## 33. 日志记录
 
-所有生产脚本必须记录带时间戳的操作日志。
+不是所有脚本都必须写时间戳日志。日志需求取决于脚本是否承担生产运维、审计、排错或长任务追踪职责。
+
+**规则：**
+- 对需要审计/恢复的任务记录开始、结束、关键状态和退出码；对短小的一次性命令，不强制创建日志。
+- 不记录密码、token、个人敏感信息和无必要的完整载荷。
+- 长期日志设置大小/保留策略；并发写日志时使用独立文件或锁。
+
 
 ## 34. 返回值标准化
 
-使用标准化的退出码便于调用方判断错误类型。
+为脚本/项目定义稳定的退出码契约，调用方据此区分成功、参数错误、外部依赖失败和权限拒绝等类别。
+
+**规则：** 退出码含义由项目接口定义；不要声称存在适用于所有 Windows 脚本的通用业务错误码表。
 
 ## 35. 配置文件读取
 
 复杂配置用 JSON/YAML，通过 PowerShell 解析；简单配置用环境变量。
 
+
 ## Git Bash 与 MSYS2 路径转换
 
-Git Bash 的 MSYS2 层自动将 `/` 开头的参数（如 `/PID`）转换为 Windows 路径，导致传给 `powershell.exe` 的参数被破坏。
+MSYS2 runtime 会把看起来像 POSIX 路径的参数/环境变量转换为 Windows 路径。某些原生 Windows CLI 的选项值可能因此被误转换。
 
-| 问题 | 表现 | 修复 |
-|------|------|------|
-| `/PID` -> 路径 | `spawnSync powershell.exe ETIMEDOUT` | 设 `MSYS2_ARG_CONV_EXCL=*` |
-| 路径参数丢失 | 传参失败 | 用 `//` 前缀绕过转换 |
+**规则：**
+- 先依据目标程序实际收到的 argv 复现问题，再使用 `MSYS2_ARG_CONV_EXCL` 排除特定参数前缀；该变量支持 `*` 或分号分隔的前缀列表。
+- 优先排除最窄的选项前缀，不要全局禁用所有参数转换，除非已确认该命令所有参数都不需要 MSYS 路径转换。
+- 不把 `//` 当作跨工具通用的绕过方案；实际转换规则以 Git for Windows/MSYS2 版本文档为准。
 
 ## 重复安装
 
 opencode 同时通过 npm 和 WinGet 安装时，PATH 顺序决定生效版本。当前仅保留 npm 版。
 
+
 ## 检查清单
 
-- [ ] `)` 在 `for` 体内是否用 `^)` 转义
-- [ ] `"..."` 内无 `\"`（用单引号替代）
-- [ ] `Get-Location` 是否调用了 `.Path`
-- [ ] `chcp 65001` 后无中文/特殊字符变量
-- [ ] `for` 内修改变量是否用了延迟展开 `!var!`
-- [ ] `Set-Content` 指定了正确编码
-- [ ] `%~dp0` 路径拼接无多余 `\`
-- [ ] `.ps1` 执行策略用 `-ExecutionPolicy Bypass`
-- [ ] `@echo off` 是否为第一行
-- [ ] 路径含空格时是否用引号包裹
-- [ ] 特殊字符是否按层级正确转义
-- [ ] 输出文件是否确认无 BOM 问题
-- [ ] 管道传递中文时是否统一编码
-- [ ] 需要管理员权限时是否先检测
-- [ ] 长路径是否启用支持或使用 `\\?\` 前缀
-- [ ] 长时间命令是否设置超时
-- [ ] 退出码是否标准化
+- [ ] CMD 括号块中的未转义 `)` 是否会提前结束代码块
+- [ ] 多层 CMD/PowerShell 引号是否按两层解析分别验证
+- [ ] 是否避免把 `PATH` 当作普通临时变量覆盖
+- [ ] 括号块中是否存在提前展开的 `%VAR%`
+- [ ] 启用延迟展开时是否可能损坏字面 `!`
+- [ ] PowerShell 5.1 与 7+ 的编码默认值是否区分
+- [ ] 文件读写与原生程序管道是否明确指定/核验编码
+- [ ] `$LASTEXITCODE`、`$?` 和 CMD `ERRORLEVEL` 是否用在正确边界
+- [ ] 是否检查并遵守组织执行策略，而不是默认 Bypass
+- [ ] 是否避免未经授权的 UAC 自动提权
+- [ ] 长路径是否同时满足 OS 设置与应用 manifest/工具能力
+- [ ] 超时能否停止整个子进程树并等待清理
+- [ ] 日志是否符合运维需求且未泄露敏感信息
+- [ ] `setx` 是否避开 1024 字符截断与 PATH 风险
+- [ ] MSYS2 参数转换是否按最窄前缀处理
