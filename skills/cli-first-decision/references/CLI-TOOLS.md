@@ -1,6 +1,6 @@
 # CLI 工具链参考
 
-权威来源与版本策略见 [AUTHORITATIVE-SOURCES.md](AUTHORITATIVE-SOURCES.md)。
+权威来源与版本策略见 [AUTHORITATIVE-SOURCES.md](AUTHORITATIVE-SOURCES.md)。第三方库/框架文档在 Context7 可用时先 resolve library ID，再 query_docs，并以官方手册和当前版本进行二次核验。
 
 本文件记录 DSH + FastCtx 环境中的命令行路由。FastCtx 是本地文件与命令操作入口；CLI 是组合、过滤、转换和批处理执行层。不要把工具清单误解为所有机器都必然安装了全部二进制：优先使用已配置工具，只有遇到缺失或参数不确定时才做轻量能力检查。
 
@@ -126,6 +126,7 @@ just --list
 ## 7. 官方文档与版本来源速查
 
 - **DSH/FastCtx 自身契约**：查看 [AUTHORITATIVE-SOURCES.md](AUTHORITATIVE-SOURCES.md) 的 DSH 与 FastCtx 两节；不要把别的 MCP 宿主或其他版本行为套过来。
+- **Context7**：第三方库/框架检索先 resolve 再 query_docs；项目型专有工具仍以 DSH/FastCtx 上游仓库为准。
 - **Shell/Windows**：GNU Bash Manual、POSIX.1-2024、Git for Windows Technical Overview、MSYS2 Filesystem Paths。
 - **结构与文本搜索**：ast-grep CLI Reference、ripgrep User Guide、fd 与 sd 上游 README/man page。
 - **数据与网络**：jq Manual、Mike Farah yq docs、curl docs/Everything curl、zstd CLI manual、DuckDB CLI docs。
