@@ -20,7 +20,7 @@ class MockServerHttpTests(unittest.TestCase):
     def setUpClass(cls):
         cls.runtime = MockRuntime()
         handler = type("TestHandler", (Handler,), {"runtime": cls.runtime})
-        cls.server = ThreadingHTTPServer(("localhost", 0), handler)
+        cls.server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
         cls.server.allowed_origins = {
             "http://localhost:8090",
             "http://127.0.0.1:8090",
@@ -35,7 +35,7 @@ class MockServerHttpTests(unittest.TestCase):
         cls.server.server_close()
 
     def request(self, path, origin=None):
-        connection = http.client.HTTPConnection("localhost", self.port, timeout=3)
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=3)
         headers = {}
         if origin:
             headers["Origin"] = origin
