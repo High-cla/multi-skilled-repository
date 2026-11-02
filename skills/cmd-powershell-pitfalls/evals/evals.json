@@ -1,0 +1,91 @@
+{
+  "skill_name": "cmd-powershell-pitfalls",
+  "evals": [
+    {
+      "id": 1,
+      "name": "cmd-parenthesis-block-parsing",
+      "prompt": "在 .cmd 的 for/do 括号块里输出类似 addappid(123, 1) 的文本，脚本却提前结束。如何修正，并说明哪些右括号需要转义？",
+      "assertions": [
+        "解释 CMD 先解析整个括号块，能结束当前块的未转义右括号会被当作语法",
+        "仅对 CMD 解析器会识别为块结束符的右括号使用 ^)，不要机械转义所有字符串中的右括号",
+        "给出能在 Windows CMD 批处理文件中运行的最小回归样例"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "delayed-expansion-and-literal-bang",
+      "prompt": "for 括号块内更新的计数器总是打印旧值，但开启 delayed expansion 后文件名中的感叹号又丢了。怎么同时处理？",
+      "assertions": [
+        "说明 %var% 在括号块解析阶段展开，块内读取更新值时可使用 !var!",
+        "说明 delayed expansion 会扫描并可能破坏字面 !，尤其是任意文件名或输入数据",
+        "提供关闭 delayed expansion 读取任意数据、仅在安全片段启用或拆分代码块的方案"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "cmd-powershell-variable-boundary",
+      "prompt": "从 cmd 调 powershell -Command 时，$env:NAME、$value、%NAME% 分别在哪一层展开？",
+      "assertions": [
+        "说明 CMD 的 %NAME% 在 PowerShell 启动前由 CMD 展开",
+        "说明 $value 与 $env:NAME 属于 PowerShell 语法，CMD 不会把 $ 当作环境变量展开符",
+        "建议复杂脚本使用独立 .ps1 文件和显式参数，避免多层引号拼接"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "powershell-51-vs-7-file-encoding",
+      "prompt": "同一个 Set-Content 命令在 Windows PowerShell 5.1 和 PowerShell 7+ 生成的文件编码不同。如何固定 UTF-8 无 BOM？",
+      "assertions": [
+        "区分 Windows PowerShell 5.1 与 PowerShell 7+ 的默认编码行为",
+        "指出 Windows PowerShell 5.1 的 -Encoding UTF8 会写 BOM；PowerShell 7+ 可用 utf8NoBOM",
+        "给出跨版本可靠的 .NET UTF8Encoding(false) 写入方式，并要求按字节验证 BOM"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "native-and-cmdlet-exit-codes",
+      "prompt": "批处理调用 PowerShell 后总是得到错误的退出码；PowerShell 里的原生命令和 cmdlet 也需要区分。",
+      "assertions": [
+        "区分 PowerShell 原生命令的 $LASTEXITCODE 与 PowerShell 成功状态 $? / 错误记录",
+        "需要传播状态时在 PowerShell 中显式 exit <code>",
+        "在 CMD 中使用 if errorlevel N 时说明它判断的是大于或等于 N，并避免在括号块中读取过早展开的 %ERRORLEVEL%"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "execution-policy-scope-and-gpo",
+      "prompt": "脚本被执行策略阻止，能否一律加 -ExecutionPolicy Bypass？",
+      "assertions": [
+        "先检查 Get-ExecutionPolicy -List 和当前有效策略",
+        "说明 MachinePolicy/UserPolicy 等组策略优先级不能被 Process Bypass 覆盖",
+        "将 Execution Policy 描述为纵深防御机制，不把 Bypass 当成通用修复或安全审查替代品"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "cmd-quoting-and-metacharacters",
+      "prompt": "cmd 内嵌 PowerShell 时，路径含空格、双引号、&、| 和括号，应该怎样组织命令？",
+      "assertions": [
+        "区分 CMD 外层解析和 PowerShell 内层解析，不提供通用的反斜杠转义口诀",
+        "对 CMD 元字符按具体解析层级引用或转义",
+        "建议复杂逻辑移入 .ps1 文件并通过 -File/参数传递"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "cross-shell-runtime-verification",
+      "prompt": "请给一段涉及括号解析、编码、退出码和执行策略的 cmd/PowerShell 修复方案，并说明验证矩阵。",
+      "assertions": [
+        "区分 Windows CMD、Windows PowerShell 5.1 和 PowerShell 7+ 的行为边界",
+        "至少提供一个 CMD 解析回归、一个文件编码字节回归和一个退出码回归",
+        "不能把仅在 PowerShell 7+ 验证的结果声称为 Windows PowerShell 5.1 已验证"
+      ]
+    }
+  ],
+  "validation_matrix": [
+    "Windows CMD (cmd.exe /d /c; execute the saved .cmd fixture, not only an interactive command)",
+    "Windows PowerShell 5.1 (powershell.exe -NoProfile -NonInteractive)",
+    "PowerShell 7+ (pwsh -NoProfile -NonInteractive)",
+    "Record OS build, executable path/version, code page, stdout/stderr, exit code, and output-file BOM bytes for each runtime"
+  ]
+}
