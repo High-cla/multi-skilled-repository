@@ -109,6 +109,8 @@ class BrowserSafetyTests(unittest.TestCase):
         self.assertIn("document.createElement", html)
         self.assertIn("/api/spawn/status", html)
         self.assertIn("Mock 模拟完成", html)
+        self.assertIn("pendingRequests", html)
+        self.assertIn("再次点击可查询原请求", html)
 
 
 if __name__ == "__main__":
