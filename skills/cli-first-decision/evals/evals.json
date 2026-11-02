@@ -1,0 +1,157 @@
+{
+  "skill": "cli-first-decision",
+  "version": "3.0",
+  "description": "Tool-routing and execution-orchestration regression cases for DSH/FastCtx environments without assumed GitHub or Context7 plugins.",
+  "cases": [
+    {
+      "id": "E01",
+      "input": "Read three known local source files before a change.",
+      "expected": [
+        "Use one FastCtx inspect_local_file call with files array",
+        "Do not shell-cat each file separately"
+      ]
+    },
+    {
+      "id": "E02",
+      "input": "Find all occurrences of a plain-text feature flag in src.",
+      "expected": [
+        "Use FastCtx grep or rg with scoped path/glob",
+        "Do not read the entire repository"
+      ]
+    },
+    {
+      "id": "E03",
+      "input": "Find TypeScript calls with a specific AST shape.",
+      "expected": [
+        "Load ast-grep skill",
+        "Use sg pattern matching",
+        "Test positive and negative examples"
+      ]
+    },
+    {
+      "id": "E04",
+      "input": "Find callers and impact of AuthService.refresh.",
+      "expected": [
+        "Load codebase-memory skill",
+        "Query symbol/call relationships",
+        "Cross-check current source"
+      ]
+    },
+    {
+      "id": "E05",
+      "input": "Rename a plain-text token across many files.",
+      "expected": [
+        "Use FastCtx replace dry-run or sd preview",
+        "Check encoding, line endings, match count and diff"
+      ]
+    },
+    {
+      "id": "E06",
+      "input": "Two independent read-only module investigations.",
+      "expected": [
+        "Run in parallel in one batch when tool limits permit",
+        "Avoid duplicate output and oversized context"
+      ]
+    },
+    {
+      "id": "E07",
+      "input": "Two tasks both need to edit src/auth.ts.",
+      "expected": [
+        "Serialize writes",
+        "Define one writer or split non-overlapping edits"
+      ]
+    },
+    {
+      "id": "E08",
+      "input": "A shell command may take six minutes.",
+      "expected": [
+        "Use FastCtx run_background",
+        "Track with job_list/job_output",
+        "Do not wait in foreground"
+      ]
+    },
+    {
+      "id": "E09",
+      "input": "Use GitHub plugin to edit a repository, but no GitHub plugin is registered.",
+      "expected": [
+        "Do not assume GitHub plugin exists",
+        "Use authenticated git/API only if available",
+        "Otherwise report remote-write blocker"
+      ]
+    },
+    {
+      "id": "E10",
+      "input": "Look up latest API usage, but no Context7 plugin is registered.",
+      "expected": [
+        "Do not call invented Context7 tools",
+        "Check version lockfile and official docs",
+        "State any unverified API behavior"
+      ]
+    },
+    {
+      "id": "E11",
+      "input": "FastCtx result ends with Partial and includes continuation parameters.",
+      "expected": [
+        "Continue using the exact returned parameters",
+        "Stop when Complete"
+      ]
+    },
+    {
+      "id": "E12",
+      "input": "A non-idempotent publish command returns an error.",
+      "expected": [
+        "Inspect remote state before retry",
+        "Do not blindly repeat the side effect"
+      ]
+    },
+    {
+      "id": "E13",
+      "input": "Change one known line in one known file.",
+      "expected": [
+        "Use direct edit",
+        "Do not spawn a subagent or create a heavyweight plan"
+      ]
+    },
+    {
+      "id": "E14",
+      "input": "Implement a multi-module feature with shared interfaces.",
+      "expected": [
+        "Clarify requirements and define interfaces/plan first",
+        "Parallelize only independent work after boundaries are stable"
+      ]
+    },
+    {
+      "id": "E15",
+      "input": "Code edits completed but tests were not run.",
+      "expected": [
+        "Do not report tests as passed",
+        "Report implementation and verification limitation separately"
+      ]
+    },
+    {
+      "id": "E16",
+      "input": "Need multiple independent facts from the same API source.",
+      "expected": [
+        "Use one batch request if supported",
+        "Do not create unnecessary parallel calls"
+      ]
+    },
+    {
+      "id": "E17",
+      "input": "Search compressed zstd JSONL logs.",
+      "expected": [
+        "Use rg -z or zstd -d -c pipeline when format confirmed",
+        "Avoid unnecessary full extraction to disk"
+      ]
+    },
+    {
+      "id": "E18",
+      "input": "MCP tool is absent, but a baked mcp2cli adapter may exist.",
+      "expected": [
+        "Check actual adapter availability/help",
+        "Use only for known baked MCPs",
+        "Otherwise choose an alternative or report blocker"
+      ]
+    }
+  ]
+}
