@@ -107,7 +107,7 @@ BepInEx 模组在 `Awake()` 调用 `Start()`、在 `Update()` 调用 `DrainQueue
 
 只替换 `TrySpawnOne(stableId, out error)`：创建物品、获取玩家主背包、检查空位并执行入包。只有在游戏 API 明确返回成功后才返回 `true`；创建失败、背包为空、无空位或入包失败都应返回 `false` 并设置错误信息。模板默认实现故意返回失败，防止未接入游戏 API 时产生虚假的成功状态。
 
-服务器仅监听 localhost。CORS 头用于静态网页跨域访问，不是身份验证或访问控制；只向可信静态站点发布网页，并在实际部署时按平台要求审查本地服务暴露面。
+服务器仅监听 localhost。浏览器跨域请求的 `Origin` 必须与 `spawn_server.cs` 中 `AllowedOrigins` 精确匹配；mock 可用重复的 `--allow-origin https://your-trusted-origin.example` 添加来源。默认只允许 `http://localhost:8090` 和 `http://127.0.0.1:8090`。部署 GitHub Pages 时，必须把实际 Pages origin（仅 origin，不带路径）显式加入 allowlist；不要使用通配符 `*`。无 Origin 的本机工具（如 curl）仍可访问，因此这不是对本机恶意进程的身份验证或完整授权边界。
 
 ## 步骤 4: 网页物品浏览器
 
@@ -127,7 +127,7 @@ python -m http.server 8090 --directory assets
 
 ## 步骤 5: 托管 + 验证
 
-**mock 验证：** `python scripts/mock_spawn_server.py --port 26880`。
+**mock 验证：** `python scripts/mock_spawn_server.py --port 26880`。本机静态站点使用默认 origin allowlist；额外网页来源请通过 `--allow-origin <exact-origin>` 明确授权。
 
 1. 打开与 `items_data.js` 同目录的网页，确认目录加载、分类和搜索正常。
 2. `/api/health` 显示 `mode: "mock"`；点击生成后先看到“已入队”，再轮询状态。
