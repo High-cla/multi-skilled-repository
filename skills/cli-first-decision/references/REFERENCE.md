@@ -163,7 +163,7 @@ PTC 的权威定义来自 DSH 当前安装版本的 `@deepseek-ai/dsh-tools`、`
 
 - PTC presentation 下，模型直接调用的执行入口是 `run_code`；其它当前可见的工具由运行时按 `ctx.ptcRuntime.language` 生成程序内 SDK。
 - 当前官方 `run_code` schema 要求 `code` 与 `description` 两个字段。TypeScript runtime 的 `code` 是异步函数体，支持顶层 `await` / `return`，但只支持可擦除类型语法。
-- SDK 的类型渲染语言由加载的 PTC runtime 决定；当前实现包含 TypeScript 和 Python renderer。**不得假设所有 DSH PTC 环境恒为 TypeScript。**
+- SDK 的类型渲染语言由加载的 PTC runtime 决定；`dsh-tools` 当前包含 TypeScript 与 Python renderer，Node provider 执行 TypeScript，Python runtime 位于实验性 package。**不得假设所有 DSH PTC 环境恒为 TypeScript。**
 - 以本会话展示的 `tools:sdk` 声明为准，精确核验工具名称、参数、返回类型和可见范围。不要复制旧会话的 schema，不要自行创造工具名。
 - PTC-only 模式中不能把 SDK 绑定误认为模型顶层工具；应通过 `run_code` 内的 `await tools.<tool_name>(args)` 进入调用流水线。
 - `packages/sdk`（进程外驱动 Harness）与 PTC 自动生成的 `tools:sdk`（程序内调用当前 agent 工具）不是同一概念。
@@ -203,7 +203,7 @@ return contents.map((content, index) => ({
 
 ### 9.5 超时、安全与副作用
 
-- 当前工具目录对 Node provider 给出的 `timeoutMs` 默认值为 120,000 ms、最大值为 600,000 ms；这不是所有 runtime/provider 的全局常量，必须以本会话 schema 为准。
+- 当前工具目录对 Node provider 给出的 `timeoutMs` 默认值为 120,000 ms、最大值为 600,000 ms；Node provider README 还列出 `maxOldGenerationSizeMb` 默认 512 MiB、`maxOutputBytes` 默认 64 MiB、`maxMessageBytes` 默认 128 MiB 等参数。它们均为 provider 版本配置，不等于所有 PTC 中间值都有相同 byte cap；必须以本会话 runtime/schema 为准。
 - 更宽的 `sandbox_permissions` 需要解释理由并经审批；权限只适用于该次执行。嵌套工具仍遵守自身策略与审批。
 - Runtime 的 isolation/substrate 描述不能单独证明 OS 级安全隔离。检查当前 PTC provider、实际 sandbox mode 和执行结果报告的 enforcement facts；按 DSH sandbox policy 操作，不通过 Node API 或子进程绕过宿主权限。
 - 对于取消和失败，区分外层代码异常、超时/取消、SDK 子工具错误和 sandbox 拒绝。工具定义若要求协作式取消，应观察传入的 signal。
