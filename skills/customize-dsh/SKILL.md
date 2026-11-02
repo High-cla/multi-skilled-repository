@@ -23,12 +23,14 @@ DSH 是"万物皆可插件"的宿主：配置严格校验，格式错误会导�
 
 ## 使配置生效（热重载 vs 重启）
 
-- **cordis.yml / patch 层**：HMR。`cordis-plugin-hmr` 监视文件，保存时按 entry `id` 对比、事务式重应用（卸载旧实例→加载新实例），`!!js` 表达式在仍运行的服务基础上重算。
-- **settings.yaml**：`watch` 热发布（默认开启）。`live` owner 立即生效；`restart` owner 只在构造期读一次。改动后通常无需重启。
-- **技能**：文件系统 watcher 监听技能目录，`skills/change` 事件使目录失效；模型侧目录在 digest 变化时自动替换，改完下一轮即生效。
-- **agent preset 默认值**：热设置只影响**此后创建**的会话；已运行会话停在原 preset。
-- **需重启**：修改 profile `package.json` 的 `dsh.profile.bundles` 列表（用 `dsh plugin` 走重调和安装）、改 bundle 的 patch 声明。
-- **运行时通道**：动态 cordis 插件（`cordis_define`/`cordis_run`/`cordis_stop`/`cordis_undefine`）与本机 dsh-super-injector（`dev_inject_plugin`/`dev_install_package`/`dev_reload_package`/`dev_uninject_plugin` 等 dev_* 工具）可免重启注入/热重载/卸载即净。
+不要把“保存文件”一概等同于 HMR：是否热重载由当前 profile 的组合配置决定。上游 `app-boot` 文档明确说明，随附 `web` profile 启用 live reload；`headless`、`sdk`、`sdk-minimal`、`acp` 等模板在启动时应用 patch，修改后需要重启。
+
+- **cordis.patch.yml / `!!js`**：只有组合树挂载了 `@deepseek-ai/dsh-hmr`（或相应 HMR provider）时，文件变更才会触发按 entry `id` 的卸载、重载或重新配置；`!!js` 也只有在实际 Loader 求值时才生效。先用 `dsh --profile <name> --dump-config` 查看最终组合，再确认 HMR entry 是否存在。
+- **settings / volatile Config**：不是所有 `settings.yaml` 字段都会热更新。插件必须把字段声明为 `volatile` 并按其 API 读取；`.get()` 取得当前值，消费者通过 `loader/volatile-update` 等机制响应变化。`ctx.settings.update/replace/mutate` 是配置表单编辑 API，按 profile entry id 操作，并带可选 revision 冲突检查；不能据此推断任意文件编辑都实时生效。
+- **技能**：本地 filesystem provider 默认 watch roots。新增、重命名、删除技能或修改 frontmatter 会使下一次 catalog lookup 更新；技能正文在每次 `get()` 时重新读取，因此正文修改无需 catalog cache invalidation。`references/`、`scripts/`、`assets/` 等资源文件变更本身不会触发技能目录 catalog refresh。
+- **agent preset**：默认 preset 选择影响后续新建会话；已运行会话不会因修改默认值自动切换。切换 preset 有空白会话等限制，需按当前 preset subsystem 文档核验。
+- **bundle 列表**：修改 profile manifest 的 `dsh.profile.bundles` 会改变安装/组合结构，使用 `dsh plugin --profile <name> add/remove` 管理依赖，并按 CLI 输出完成安装与重启。
+- **运行时注入**：`cordis_define` / `cordis_run` 等动态 Cordis 工具、`dsh-super-injector` 的 `dev_*` 工具仅在相应插件、工具和权限实际挂载时可用；不可把开发注入通道当作每个 DSH profile 的内置能力。
 
 ## 文件存放位置
 
@@ -102,7 +104,7 @@ llm-pi-ai:
 ```yaml
 # 1) insert：追加 entry
 - insert:
-    - id: mcp-fastctx            # 行 id（全局唯一；重复会冲突）
+    - id: mcp-fastctx            # 行 id；同一组合树中应保持稳定且唯一
       name: '@deepseek-ai/dsh-mcp-client'   # 插件包名/相对路径
       config:                    # 插件配置（随插件 schema 而异）
         serverName: fastctx
@@ -111,14 +113,15 @@ llm-pi-ai:
         args: ['serve']
         env: { KEY: '1' }
         cwd: !!js process.cwd()  # !!js 表达式在挂载时求值
-        toolCallTimeoutMs: 300000
+        # toolCallTimeoutMs 默认 60000 ms；需要时再显式覆盖
 # 2) id-targeted：命中 id 即【替换该 entry 的整份 config】——无深度合并，
 #    必须重述要保留的所有字段
 - id: some-plugin-id
   name: '@deepseek-ai/dsh-xxx'
   config: { ... }
-# 3) disable：卸载 entry 但不删除
-- disable: { id: some-plugin-id }
+# 3) disabled：保留 entry，但不挂载
+- id: some-plugin-id
+  disabled: true
 ```
 
 **校验与失败规则**：
@@ -133,7 +136,7 @@ llm-pi-ai:
 
 ## Skills（技能创作）
 
-技能加载器扫描技能目录的**直接**条目：目录包 `<name>/SKILL.md` 或扁平文件 `<name>.md`（`**/SKILL.md` 递归**不支持**）。
+本地 filesystem skill provider 扫描技能根目录的**直接**条目：目录包 `<name>/SKILL.md` 或扁平文件 `<name>.md`（不会递归发现任意深度的 `**/SKILL.md`）。注意 `ctx.skills` 本身是 provider registry，也可由远程或内嵌 provider 提供技能；以下路径与发现规则仅描述随附的本地 filesystem provider。
 
 ```markdown
 ---
@@ -149,7 +152,7 @@ user-invocable: true              # 可选，默认 true
 ```
 
 - `name` 必填，kebab-case（`^[a-z0-9]+(?:-[a-z0-9]+)*$`），与目录名一致
-- `description` 几乎必填：无 description 的 skill 被过滤。目录只展示 name+description（正文不进目录），description 默认上限 500 字符
+- `description` 必填：无效或缺失的 description 会使该 skill 被跳过。模型目录展示摘要而非完整正文；description 长度上限和解析规则以当前 skill-filesystem 配置/源码为准，不要依赖硬编码的 500 字符常量
 - 重名裁决：rank 低者赢，再按提供方顺序、本地顺序；最近 scope 层条目直接压过全局层
 - `skill` 工具加载后返回 `<skill_content>`、`<skill_resources>`、`<skill_instructions>`；资源（scripts/references/assets）按需解析，不枚举目录
 - 本环境技能库在 `~/.agents/skills/`（user-agents 层），与 `customize-opencode`、`skill-creator` 等并列
@@ -206,19 +209,19 @@ export function apply(ctx: Context) {
 - **Code Mode**：`tools` 插件 config 的 `mode: 'native' | 'code' | 'both'`（`both` 下模型可写 TS/Python 程序经 `run_code` 触达全部工具；`run_code` 是保留名）；工具错误类型 `ToolArgsError`/`ToolOutputError`/`ToolNotFoundError`
 - 插件可配 Config 用 `@deepseek-ai/schemastery` 的 `Schema.object(...)` 导出 `Config`（不要导出普通对象）；**无效配置在加载时失败并给出明确错误**；约定：不同部署可能需要不同值的参数都必须定义为配置字段
 - **挂载通道**：① `dsh.profile.bundles`（随 profile 启动）② `cordis.patch.yml` 的 insert（HMR 热生效）③ 运行时注入（super-injector dev_* 工具，免重启）④ 动态 cordis（`cordis_define`/`cordis_run`，会话级）
-- 工具注册表分层：宿主行与 repository 插件落 GLOBAL 层，preset 挂载落该 preset 层；MCP 桥接工具以 `mcp__<serverName>__<tool>` 出现在 GLOBAL 层
+- 工具注册表按 scope 分层；MCP 工具名为 `mcp__<serverName>__<tool>`，实际可见范围取决于 MCP client 所挂载的注册作用域，不应一概描述为 GLOBAL
 
 ## MCP servers
 
-通过 `cordis.patch.yml` 插入 `@deepseek-ai/dsh-mcp-client` 行（见"Profiles 与 patch 层"示例）。关键配置键：
+通过 `cordis.patch.yml` 插入 `@deepseek-ai/dsh-mcp-client` 行（见"Profiles 与 patch 层"示例）。当前上游默认值以 [MCP client README](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/mcp/mcp-client/README.zh.md) 和生成的 config catalog 为准。关键配置键：
 
-- `serverName`：桥接名，工具前缀 `mcp__<serverName>__<工具原始名>`；须匹配 `[A-Za-z0-9_-]{1,32}` 且在存活 mcp-client 实例间唯一
+- `serverName`：桥接名，工具前缀 `mcp__<serverName>__<工具原始名>`；须匹配 `[A-Za-z0-9_-]{1,32}`，在同一注册作用域内唯一；独立 agent scope 可隔离复用
 - `transport`：`stdio` | `streamable-http`（官方只有这两种，没有 `remote`）
-- `command` + `args`：stdio 模式的可执行与参数（用绝对路径，避免 .cmd shim/npx 网络检查）
+- `command` + `args`：stdio 模式的可执行与参数。生产部署优先使用可预测的可执行路径并固定包版本；`npx` 可能触发包解析/网络安装，不应在未评估可重复性时作为生产默认。
 - `env`：传给服务器的环境变量；`cwd`：工作目录（常用 `!!js process.cwd()`）
-- `toolCallTimeoutMs`：工具调用超时（慢服务器如 LSP/代码索引建议 300000）
+- `toolCallTimeoutMs`：每次 MCP `tools/call` 或资源请求的超时，当前默认 **60000 ms**；只有确认目标服务器确实需要更长时间时才提高。
+- `failOnStartupError`：初始连接或工具同步失败时是否拒绝插件激活，当前默认 **false**；默认情况下 DSH 可继续启动，但该服务器工具不会出现并会记录错误。若服务为关键依赖，再显式设为 `true`。
 - 远程（streamable-http）：`url` + 可选 `headers`
-- `failOnStartupError`：初始连接或工具同步失败时插件激活失败（默认行为是失败）
 
 ## 权限与沙箱
 
