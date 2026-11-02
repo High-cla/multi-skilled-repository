@@ -21,7 +21,10 @@
 - [工具注册/执行管线：`@deepseek-ai/dsh-tools`](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/core/tools/README.md) — native/PTC presentation、工具 schema、策略、调用生命周期、取消和并发安全约定。
 - [官方工具目录（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/tool-catalog.zh.md) — 当前工具名称、参数 schema、说明和源码归属；包含 `run_code` 的真实输入定义。
 - [PTC executor 源码](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/core/tool-executor-ptc) — PTC schema、SDK 呈现、子调用调度和结果归并。
-- [PTC runtime 子系统说明](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/core/ptc-runtime) — Runtime provider seam；按当前仓库实际目录和包名核验。
+- [PTC runtime 服务契约](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/ptc-runtime/ptc-runtime) — Runtime provider seam、请求/结果契约。
+- [官方 Node PTC runtime 文档](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/ptc-runtime/ptc-runtime-node/README.md) — 当前 Node provider 的执行模式、沙箱后端、超时、输出与 V8 heap 限制。
+- [实验性 Python PTC runtime](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/experimental/ptc-runtime-python) — Python provider；只有在对应组合明确加载时才适用。
+- [模块依赖图](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/module-graph.md) — 核验当前 PTC runtime、Node provider、sandbox 和 executor 的真实包边界。
 - [并行工具调用实现说明](https://github.com/deepseek-ai/deepseek-harness/blob/master/.agents/notes/implemented/feature/2026-07-10-parallel-tool-call-execution.md) — 并发调度的实现背景；以当前代码/schema 为最终准据。
 - [PTC Runtime 开发者文档](https://deepseek-harness.github.io/deepseek-harness/en/reference/subsystems/ptc-runtime) — runtime request/result、provider、sandbox facts 和错误分类。
 - [工具目录在线文档](https://deepseek-harness.github.io/deepseek-harness/en/reference/tool-catalog) — 发布文档入口；版本敏感细节应回到已安装 commit 的仓库源码。
@@ -30,11 +33,12 @@
 
 - PTC 模式对模型公开 `run_code` 入口和由当前运行时语言生成的 SDK；其它工具通过程序内的 `tools.<name>(args)` 绑定访问。**不要绕开 PTC 调用模式，直接假设每个 MCP 工具都能作为模型顶层工具调用。**
 - 当前工具目录中 TypeScript `run_code` schema 的必填字段是 `code` 与 `description`；程序体是异步 TypeScript 函数体，支持顶层 `await` / `return`，只允许可擦除类型语法。运行时/schema 变更时以注入说明为准。
-- SDK 语言取决于加载的 `ctx.ptcRuntime.language` 和已注册 renderer。当前实现包含 TypeScript 与 Python SDK renderer；不能把某一次会话看到的 TS 声明当成所有 PTC preset 的永久约定。
+- SDK 语言取决于加载的 `ctx.ptcRuntime.language` 和已注册 renderer。`dsh-tools` 当前有 TypeScript 与 Python SDK renderer；Node provider 执行 TypeScript，Python runtime 位于实验性 package。不能把某一次会话看到的 TS 声明当成所有 PTC preset 的永久约定。
 - 当前 `@deepseek-ai/dsh-tools` 文档给出的 `maxParallelSubCalls` 默认值为 10；设为 1 可串行执行。它是该 DSH 版本的配置默认值，不应硬编码成所有运行时的固定上限。
 - `Promise.all` 只表达程序端的并发意图。工具定义的 concurrency-safe 分类和执行 scheduler 决定是否真正重叠；未知或不安全调用不得为了提速强制并发，副作用操作要遵从调度顺序和工具契约。
 - PTC 中间绑定结果保留在执行本地；当前 dsh-tools 文档说明中间值没有字节数上限，可能耗尽进程/worker 内存。只取需要字段，及时聚合/丢弃大对象，流式或分块处理大数据；外层 `run_code` 输出另有硬上限。
 - 当前工具目录中 Node runtime 的 `timeoutMs` 默认 120,000 ms、上限 600,000 ms；这是 Node provider 的当前 schema 行为，不代表其它 runtime/provider 都相同。
+- 当前 Node provider README 还列出 `executionMode: per-call`（默认，每次新 Node 进程）、可选 `persistent-in-memory`（每个 Agent 保留受限 REPL）、`maxOldGenerationSizeMb: 512`、`maxOutputBytes: 64 MiB`、`maxMessageBytes: 128 MiB` 等配置默认值。这些都是该 provider 版本的配置，不能当作 PTC SDK 的通用内存上限；尤其中间对象仍应主动限量。
 - 请求更宽的 `sandbox_permissions` 时需要 `justification` 和审批。要检查 provider 实际报告的 sandbox enforcement/facts；不能把 `isolation` 一词当成 OS 级安全保证，也不能把 sandbox policy 扩权理解为永久授权。
 - 子调用失败按真实错误对象处理（例如 `ToolCallError` 的 `toolName`）；外层程序异常与工具调用异常需要区分。执行失败不自动回滚此前副作用，不自动重放非幂等调用；重试前核对实际状态。
 
@@ -45,7 +49,8 @@
 ### 官方项目与版本
 
 - [FastCtx 官方仓库](https://github.com/yc-duan/fastctx)
-- [FastCtx 中文 README](https://github.com/yc-duan/fastctx/blob/main/README.zh-CN.md) — 当前仓库文档；主分支可能领先已发布二进制。
+- [FastCtx v0.2.6 中文 README](https://github.com/yc-duan/fastctx/blob/v0.2.6/README.zh-CN.md) — 与该 release tag 配套的 MCP 工具文档。
+- [FastCtx 中文 README（main）](https://github.com/yc-duan/fastctx/blob/main/README.zh-CN.md) — 当前仓库文档；主分支可能领先已发布二进制。
 - [FastCtx Releases](https://github.com/yc-duan/fastctx/releases)
 - [FastCtx v0.2.6 Release](https://github.com/yc-duan/fastctx/releases/tag/v0.2.6)
 - [v0.2.6 工具 schema 源码](https://github.com/yc-duan/fastctx/blob/v0.2.6/src/tool_schema.rs)
