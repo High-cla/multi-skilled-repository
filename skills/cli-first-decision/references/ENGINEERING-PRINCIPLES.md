@@ -1,6 +1,6 @@
 # 工程原则、定律与设计取舍
 
-原作者/原始资料索引见 [AUTHORITATIVE-SOURCES.md](AUTHORITATIVE-SOURCES.md)。KISS、YAGNI、SOLID 等属于实践原则，不是可机械套用的强制技术标准。
+原作者/原始资料索引见 [AUTHORITATIVE-SOURCES.md](AUTHORITATIVE-SOURCES.md)。Context7 可用于发现库/规范文档，但原则的原文与适用范围须回到原始来源核验。KISS、YAGNI、SOLID 等属于实践原则，不是可机械套用的强制技术标准。
 
 原则用于帮助判断，不是互相独立的硬规则。遇到冲突时，以用户目标、既有契约、风险、可验证证据和整体成本为准。
 
