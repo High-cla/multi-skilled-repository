@@ -1,1 +1,2 @@
-# No ignore patterns are currently required.
+# Game-specific catalog generated from local game resources; do not publish by default.
+skills/game-item-spawner/assets/items_data.js
