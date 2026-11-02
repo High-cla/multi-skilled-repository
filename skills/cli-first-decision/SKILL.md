@@ -327,16 +327,16 @@ const paths = [
   "/project/package.json",
 ];
 
-const contents = await Promise.all(
+const outcomes = await Promise.allSettled(
   paths.map((path) => tools.read_file({ path }))
 );
 
-// 中间结果留在程序内部，只返回模型真正需要的摘要。
-return contents.map((content, index) => ({
-  path: paths[index],
-  preview: content.slice(0, 1200),
-  chars: content.length,
-}));
+// 按路径保留每个成功/失败分支；按当前 SDK 的真实返回类型调整。
+return outcomes.map((outcome, index) =>
+  outcome.status === "fulfilled"
+    ? { path: paths[index], ok: true, preview: String(outcome.value).slice(0, 1200) }
+    : { path: paths[index], ok: false, error: String(outcome.reason) }
+);
 ~~~~
 
 若当前 SDK 中没有 `read_file` 或参数不同，必须按注入的签名替换示例；不得把示例名称当成 DSH 固定内置工具。
