@@ -131,6 +131,17 @@
         "普通插件 Config 通过 Cordis patch，volatile 字段通过 Settings 表单/API 编辑",
         "不得声称所有 settings.yaml 改动会自动热发布"
       ]
+    },
+    {
+      "id": 14,
+      "name": "agent-preset-selected-default",
+      "prompt": "部署默认 preset 和用户选择的默认 preset 哪个会用于新会话？旧 modeSelectionEnabled 还能控制开关吗？",
+      "assertions": [
+        "区分 registry config.default 与 volatile config.selectedDefault",
+        "未显式指定 preset 的新会话优先采用用户 selectedDefault",
+        "指出 modeSelectionEnabled 是已废弃字段，registry 不读取也不重写",
+        "已有 Agent/session 不会因默认值更新而自动换 preset"
+      ]
     }
   ]
 }
