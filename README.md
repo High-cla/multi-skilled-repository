@@ -54,7 +54,7 @@
 | 16 | 📄 追加 vs 重定向 | 循环内 `>>` 逐个打开文件 vs 一次性 `>` | 🟢 Low |
 | 17 | ✅ 检查清单 | 写完脚本后逐项自查 | — |
 
-➡️ [技能正文](./skills/cmd-powershell-pitfalls/SKILL.md) · [回归评测](./skills/cmd-powershell-pitfalls/evals/evals.json)
+➡️ [技能正文](./skills/cmd-powershell-pitfalls/SKILL.md) · [回归评测](./skills/cmd-powershell-pitfalls/evals/evals.json) · [CMD/PowerShell 实机 smoke fixtures](./skills/cmd-powershell-pitfalls/tests/)
 
 ### cli-first-decision
 
@@ -104,7 +104,7 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
 | 网页 | items_data.js 外置加载；目录字段仅通过 DOM API/textContent 渲染；按钮区分入队、处理中、游戏成功与 Mock 模拟完成 |
 | 验证 | mock 明确区分入队与模拟完成；模拟成功不代表真实游戏已入包 |
 
-**换游戏复用**: HTTP/队列/网页/验证框架可复用；只需接入游戏创建 API、主背包和入包 API。`TrySpawnOne` 未接入真实游戏 API 时默认失败，不会伪造生成成功。附带 `evals/evals.json`（7 个评估用例）和 `tests/test_catalog_pipeline.py`。
+**换游戏复用**: HTTP/队列/网页/验证框架可复用；只需接入游戏创建 API、主背包和入包 API。`TrySpawnOne` 未接入真实游戏 API 时默认失败，不会伪造生成成功。附带 `evals/evals.json`（7 个评估用例）和目录提取/转换、mock HTTP 协议回归测试。
 
 ➡️ 完整内容: [`skills/game-item-spawner/SKILL.md`](./skills/game-item-spawner/SKILL.md)
 
@@ -114,14 +114,20 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
 
 ```
 .
+├── .github/
+│   └── workflows/
+│       └── repository-regression.yml
 ├── .gitignore
 ├── LICENSE
 ├── README.md
 └── skills/
     ├── cmd-powershell-pitfalls/
     │   ├── SKILL.md
-    │   └── evals/
-    │       └── evals.json
+    │   ├── evals/
+    │   │   └── evals.json
+    │   └── tests/
+    │       ├── cmd-runtime-smoke.cmd
+    │       └── powershell-runtime-smoke.ps1
     ├── cli-first-decision/
     │   ├── SKILL.md
     │   ├── references/
@@ -149,6 +155,9 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
         │   └── mock_spawn_server.py
         ├── assets/
         │   └── items_browser.html
+        ├── tests/
+        │   ├── test_catalog_pipeline.py
+        │   └── test_mock_server.py
         └── evals/
             └── evals.json
 ```
