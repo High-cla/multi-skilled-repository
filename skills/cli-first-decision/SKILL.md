@@ -3,10 +3,10 @@ name: cli-first-decision
 description: "多步骤任务的工具选择、执行编排与成本优化协议。适用于本地文件读写、全文与结构搜索、批量处理、符号与调用链分析、API 调试、并行执行、子智能体委派和工具选型。触发词：用哪个工具、怎么执行、先做什么、能否并行、能否合并、批量操作、代码搜索、调用链、影响面、任务委派。"
 metadata:
   author: High-cla
-  version: "3.0"
+  version: "3.1"
 ---
 
-# CLI-First Decision 3.0
+# CLI-First Decision 3.1
 
 ## 1. 目标与原则
 
@@ -285,16 +285,16 @@ GitHub 和 Context7 插件不是本技能的依赖，也不得假设它们已安
 
 ### 10.1 默认使用方式
 
-当当前 DSH 会话运行在 PTC preset，且提示上下文提供 §tools:sdk§ 与 §run_code§ 时，多步骤工具任务优先使用 PTC SDK 编写一个 TypeScript 程序组合，而不是把每个子步骤拆成多轮模型工具调用。
+当当前 DSH 会话运行在 PTC preset，且提示上下文提供 `tools:sdk` 与 `run_code` 时，多步骤工具任务优先使用 PTC SDK 编写一个 TypeScript 程序组合，而不是把每个子步骤拆成多轮模型工具调用。
 
-- §run_code§ 是 PTC 程序的传输入口。
-- §tools:sdk§ 是运行时根据当前 agent 可见工具注册表生成的类型化 SDK。
-- 在程序中通过 §tools.<工具名>(args)§ 调用 SDK 中实际提供的绑定。
+- `run_code` 是 PTC 程序的传输入口。
+- `tools:sdk` 是运行时根据当前 agent 可见工具注册表生成的类型化 SDK。
+- 在程序中通过 `tools.<工具名>(args)` 调用 SDK 中实际提供的绑定。
 - 工具名、参数和返回类型必须以当前会话注入的 SDK 定义为准；不得从其他项目、旧版本或记忆中猜测。
-- PTC-only 模式下，不要绕过 §run_code§ 直接调用具名工具；应通过 SDK 绑定进入工具执行流水线。
-- §tools:sdk§ 不是外部安装的 GitHub/Context7 插件，也不是进程外驱动 Harness 的 §packages/sdk§；它是 PTC 工具呈现层生成的调用 SDK。
+- PTC-only 模式下，不要绕过 `run_code` 直接调用具名工具；应通过 SDK 绑定进入工具执行流水线。
+- `tools:sdk` 不是外部安装的 GitHub/Context7 插件，也不是进程外驱动 Harness 的 `packages/sdk`；它是 PTC 工具呈现层生成的调用 SDK。
 
-如果当前会话不是 PTC preset，或没有注入 §tools:sdk§，就使用当前真实可用的原生工具调用路径。不要假装 SDK 存在，也不要仅为简单单步操作强行切换模式。
+如果当前会话不是 PTC preset，或没有注入 `tools:sdk`，就使用当前真实可用的原生工具调用路径。不要假装 SDK 存在，也不要仅为简单单步操作强行切换模式。
 
 ### 10.2 何时使用 PTC
 
@@ -313,9 +313,9 @@ GitHub 和 Context7 插件不是本技能的依赖，也不得假设它们已安
 
 ### 10.3 编排模式
 
-先读取当前会话的 §tools:sdk§，确认每个绑定的真实名称、参数、返回类型和可见性，再写程序。
+先读取当前会话的 `tools:sdk`，确认每个绑定的真实名称、参数、返回类型和可见性，再写程序。
 
-示例仅演示结构，假设当前 SDK 确实提供 §tools.read_file({ path })§，并且对应参数被调度器判定为可并发：
+示例仅演示结构，假设当前 SDK 确实提供 `tools.read_file({ path })`，并且对应参数被调度器判定为可并发：
 
 ~~~~ts
 const paths = [
@@ -336,16 +336,16 @@ return contents.map((content, index) => ({
 }));
 ~~~~
 
-若当前 SDK 中没有 §read_file§ 或参数不同，必须按注入的签名替换示例；不得把示例名称当成 DSH 固定内置工具。
+若当前 SDK 中没有 `read_file` 或参数不同，必须按注入的签名替换示例；不得把示例名称当成 DSH 固定内置工具。
 
 ### 10.4 并发语义
 
-§Promise.all§ 表示程序发起并发意图，不代表所有子调用都会并行执行：
+`Promise.all` 表示程序发起并发意图，不代表所有子调用都会并行执行：
 
 - 只有工具对当前参数明确被标记为 concurrency-safe，才允许实际重叠执行。
-- §isConcurrencySafe(args)§ 必须明确返回 §true§ 才能进入 parallel；未声明、未知、非法或判断异常均按 exclusive 处理。
+- `isConcurrencySafe(args)` 必须明确返回 `true` 才能进入 parallel；未声明、未知、非法或判断异常均按 exclusive 处理。
 - exclusive 子调用形成串行屏障；不要把有顺序依赖的写操作放进并行批次。
-- 实际并发上限由 §maxParallelSubCalls§ 运行时配置控制；参考实现默认值为 10，执行时以当前环境配置为准。
+- 实际并发上限由 `maxParallelSubCalls` 运行时配置控制；参考实现默认值为 10，执行时以当前环境配置为准。
 - 即使多个调用在程序中并发发起，工具执行策略、权限检查和最终结果顺序仍由 DSH 工具流水线管理。
 
 ### 10.5 结果与上下文
@@ -358,8 +358,8 @@ return contents.map((content, index) => ({
 
 ### 10.6 错误和副作用
 
-- SDK 绑定调用失败会在程序内表现为 §ToolCallError§；可捕获并读取 §toolName§ 定位具体失败工具。
-- PTC 程序自身运行失败会作为结构化 §CODE_RUN_FAILED§ 结果返回，检查具体错误后再调整程序。
+- SDK 绑定调用失败会在程序内表现为 `ToolCallError`；可捕获并读取 `toolName` 定位具体失败工具。
+- PTC 程序自身运行失败会作为结构化 `CODE_RUN_FAILED` 结果返回，检查具体错误后再调整程序。
 - 一个绑定调用失败不代表此前的普通副作用已回滚；不要假设 PTC 提供事务。
 - 程序结束/失败时，运行时会取消并 drain 未完成的绑定调用，但已经产生的外部副作用仍需按工具语义处理。
 - 对写入、提交、发布、删除等非幂等操作，先完成只读预检；将可并行的只读部分与写入阶段分开；失败后先检查实际状态，不盲目重跑。
