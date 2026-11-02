@@ -23,7 +23,8 @@
 ### Settings / volatile 配置
 
 - [Settings 子系统（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/settings.zh.md) — `ctx.settings` 的 describe/update/replace/mutate、profile entry id、revision 冲突。
-- [Settings package README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/settings/settings/README.zh.md) — 表单只投影插件 Config 中 `.volatile()` 字段；普通配置仍通过 Cordis 配置文件编辑。
+- [Settings package README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/settings/settings/README.zh.md) — 表单只投影插件 Config 中 `.volatile()` 字段；并明确旧 `settings.yaml` 在首次写入前改名为 `settings.yaml.imported`，之后逐 section 导入，当前组合拒绝的 section 只留在重命名文件中。
+- [Settings legacy import 回归测试](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/settings/settings/tests/configuration.spec.ts) — 覆盖一个 section 成功写入、普通字段/缺失 entry section 被拒绝并保留在 `settings.yaml.imported` 的部分导入场景。
 - [Volatile Config cookbook](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/cookbook/adding-a-settings-card.md) — `.volatile()`、`.get()` 与 `loader/volatile-update`。
 
 ### Skills
@@ -59,6 +60,7 @@
 
 - HMR 由 profile composition 决定。当前架构文档说明 base bundle 启用 config-only `dsh-hmr`，headless/SDK/ACP 关闭，`sdk-minimal` 不包含；profile patch 可覆盖。CLI 文档对随附模板的行为为准。
 - `ctx.settings` 表单只编辑 volatile Config 字段；普通 Config 仍通过 Cordis patch 管理。不能宣称所有 `settings.yaml` 更改都会热生效。
+- 旧 `settings.yaml` 在第一次写入前就重命名为 `settings.yaml.imported`，之后再逐 section 导入；不被活动 composition 接受的 section 会记录日志并只保留在该文件中。重命名不表示全部导入成功，必须检查日志和 `.imported` 文件并选择性恢复。
 - local filesystem skill provider 默认 `watch: true`；frontmatter/skill entry 变化触发 catalog refresh，而正文每次 load 重新读取。资源子目录修改不等于 catalog refresh。
 - MCP client 当前源码默认 `toolCallTimeoutMs = 60000`、`failOnStartupError = false`；`serverName` pattern 为 `[A-Za-z0-9_-]{1,32}`，唯一性按注册 scope 管理，agent scopes 可复用名称。以用户实际版本 config catalog 为准。
 - MCP 当前支持 `stdio` 与 `streamable-http`；不能虚构 `remote` transport。
