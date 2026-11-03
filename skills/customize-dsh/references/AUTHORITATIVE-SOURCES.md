@@ -83,6 +83,10 @@
 - [Extension plugin shapes cookbook（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/cookbook/extension-cookbook.zh.md) — tool、hook、UI 与 protocol driver 扩展方式。
 - [Client Modules README](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/client/modules/README.zh.md) / [Client Modules subsystem](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/client-modules.md) — 浏览器端 `dsh.client`、`./client` 入口、client bundle、模块加载与资产路由。
 - [Client stack internal conventions](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/client/AGENTS.md) — DSH 上游仓库内部 client 导出、slots、store 与 inject 规则；不要把所有 monorepo 维护约束当作外部插件硬要求。
+- [Official tool implementation example](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/shell/tool-bash) — 工具编写参考推荐的生产级工具插件源码；研究它的 executor/provider/service 依赖分层。
+- [Official Web bundle implementation](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/bundle/web-app) — bundle patch、profile layer、entry overrides 与 client roster 的官方实现样例。
+- [Official client settings implementation](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/client/ui-settings) — Web settings domain、Remote/schema 与 client extension slot 的上游实现样例。
+- [Official ACP protocol driver](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/acp/acp) — 协议驱动、session 生命周期和语义事件流的第一方完整例子；见其 [中文 README](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/acp/acp/README.zh.md)。
 - [Adding a workspace package（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/cookbook/adding-a-package.zh.md) — **只适用于修改 DSH 上游 monorepo 本身**；其中 `private`、workspace version、tsconfig references 等不是外部插件 package 的统一模板。
 - [Generated Config Catalog（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/config-catalog.zh.md) — 以目标版本核验真实配置字段、类型和默认值。
 - [DeepSeek Harness Terms of Use](https://www.deepseek.com/en/harness/terms-of-use/) — 官方安全使用和隔离边界。
