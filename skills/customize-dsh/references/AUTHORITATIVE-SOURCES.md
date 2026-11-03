@@ -72,6 +72,32 @@
 - MCP 当前支持 `stdio` 与 `streamable-http`；不能虚构 `remote` transport。
 - Agent preset 存在不同概念/实现。确认用户指的是目录型 Agent preset 还是 `@deepseek-ai/dsh-agent-preset` 的 Cordis 子插件组合，再选择对应配置路径。
 
+
+## Plugin development and publishing
+
+- [First plugin tutorial（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/index.zh.md) — Cordis entry、`name` / `inject` / `apply`、对象/类形式、依赖注入与生命周期清理。
+- [Plugin Config tutorial（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/config.zh.md) — Schemastery Config schema、默认值与加载期校验。
+- [Tool tutorial（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/tool.zh.md) — 第一个模型可调用工具的端到端教程。
+- [External plugin packaging and installation（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/publish.zh.md) — **外部插件作者首要依据**；定义 bundle 的 `dsh.bundle.patch`、profile 的 `dsh.profile.bundles`、安装、patch 叠加、engines.dsh 兼容范围、Git `prepare` 和构建授权。
+- [Tool authoring contract（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/cookbook/adding-a-tool.zh.md) — 参数 schema、规范 JSON 输出、render、执行与错误语义。
+- [Extension plugin shapes cookbook（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/cookbook/extension-cookbook.zh.md) — tool、hook、UI 与 protocol driver 扩展方式。
+- [Client Modules README](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/client/modules/README.zh.md) / [Client Modules subsystem](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/client-modules.md) — 浏览器端 `dsh.client`、`./client` 入口、client bundle、模块加载与资产路由。
+- [Client stack internal conventions](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/client/AGENTS.md) — DSH 上游仓库内部 client 导出、slots、store 与 inject 规则；不要把所有 monorepo 维护约束当作外部插件硬要求。
+- [Adding a workspace package（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/cookbook/adding-a-package.zh.md) — **只适用于修改 DSH 上游 monorepo 本身**；其中 `private`、workspace version、tsconfig references 等不是外部插件 package 的统一模板。
+- [Generated Config Catalog（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/config-catalog.zh.md) — 以目标版本核验真实配置字段、类型和默认值。
+- [DeepSeek Harness Terms of Use](https://www.deepseek.com/en/harness/terms-of-use/) — 官方安全使用和隔离边界。
+
+## Community skills and implementation examples (non-authoritative)
+
+这些仓库有参考价值，但**不是 DeepSeek 官方仓库或规范**；API、版本和实践应逐项回到上方上游资料核验。
+
+- [vlln/dsh-skills — make-dsh-plugin](https://github.com/vlln/dsh-skills/tree/main/skills/make-dsh-plugin) — 社区开发技能，涵盖插件形态选择、开发步骤、项目化、验证、发布和生态索引；适合作为工作流/检查表补充，不是字段契约。
+- [brzvsk/dsh-plugins — Visualize](https://github.com/brzvsk/dsh-plugins/tree/main/visualize) — bundle + client half、工具 + slash command + keyed tool view，以及使用 sandboxed iframe 隔离不可信 HTML 的实例。
+- [PerryLink/dsh-mcp-panel](https://github.com/PerryLink/dsh-mcp-panel) — 较完整的 Host/client 双端项目，示范状态快照、审批门、备份/验证、脱敏、真实运行时测试和兼容性 gate；版本验证声明仅代表其记录的测试时间点。
+- [vlln/plugin-registry](https://github.com/vlln/plugin-registry) — 社区插件索引实现，适合研究 registry data 与生成流程；不是官方市场审核结论。
+
+社区 Awesome 列表与 GitHub `dsh-plugin` topic 只用于发现仓库。开始使用前检查源码、许可证、维护状态、发布包内容、依赖范围、安装脚本与真实 smoke tests；下载数、市场排名和徽章不是安全证明。
+
 ## 验证命令
 
 先确认本机命令解析到哪个安装：
