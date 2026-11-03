@@ -172,6 +172,66 @@
         "defaultPreset 必须是 presets 表中已配置的 key；id-targeted patch 替换整个 config，修改时要保留现有 presets",
         "默认值变更只影响之后新建的会话；已存在或恢复的会话保留其有效权限"
       ]
+    },
+    {
+      "id": 17,
+      "name": "choose-correct-dsh-plugin-form",
+      "prompt": "我要做一个 DSH 插件：只加一个 slash command，不需要 UI，也不需要分发一组默认配置。应该做成什么？",
+      "assertions": [
+        "选择纯 Cordis 包并说明安装为 profile 依赖后仍需在 profile cordis.patch.yml 插入 entry",
+        "不把纯 Cordis package 和 bundle 混为一谈",
+        "说明 bundle 的 dsh.bundle.patch 只在需要随包分发配置层时采用"
+      ]
+    },
+    {
+      "id": 18,
+      "name": "bundle-and-profile-manifest-separation",
+      "prompt": "给我写一个可发布的 DSH bundle package.json，并说明 profile 如何安装。",
+      "assertions": [
+        "bundle manifest 使用 dsh.bundle.patch 指向 patch 文件",
+        "dsh.profile.bundles 是消费方 profile manifest，不应塞进插件 bundle manifest",
+        "说明 patch 可为单路径或有序路径数组，并用 dsh --profile <name> --dump-config 验证"
+      ]
+    },
+    {
+      "id": 19,
+      "name": "dual-face-client-plugin-contract",
+      "prompt": "我的 DSH 插件需要给 Web UI 增加一个设置页，怎样声明浏览器端？",
+      "assertions": [
+        "在 package exports 暴露 ./client，并声明 dsh.client.platform 为 web",
+        "按当前官方 schema 配置 dsh.client.inject 与必要的 external",
+        "将 host/client 数据边界和浏览器安全作为独立设计事项，不把 React 或 DOM 私有实现直接暴露"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "git-prepare-build-script-security",
+      "prompt": "用户通过 Git 安装我的 TypeScript DSH 插件时报 lib/index.js 不存在，能否建议开启 pnpm 构建脚本？",
+      "assertions": [
+        "解释 Git 安装取得源代码，作者需提供自包含 prepare 构建或分发预构建 npm/tarball",
+        "说明 pnpm 10 allowBuilds 是允许安装阶段执行包代码，执行通常不受 Agent 沙箱保护",
+        "建议先审查源码/脚本并固定 commit SHA，不应无差别授权"
+      ]
+    },
+    {
+      "id": 21,
+      "name": "external-vs-first-party-package-checklist",
+      "prompt": "我在 DSH 官方仓库看到 adding-a-package 要求 private true 和 workspace tsconfig references，外部插件也必须照做吗？",
+      "assertions": [
+        "区分 DSH monorepo 内部 package 贡献指南与外部插件发布指南",
+        "外部 bundle 应以官方 publish.zh.md 为准并按需声明 engines.dsh / peerDependencies",
+        "不要求外部社区插件复制上游 private、workspace version 或内部 tsconfig 约束"
+      ]
+    },
+    {
+      "id": 22,
+      "name": "plugin-install-success-is-not-runtime-proof",
+      "prompt": "我的 DSH 插件能安装且没有启动错误，是否可以发布？",
+      "assertions": [
+        "要求检查打包内容、exports、patch manifest 与版本兼容范围",
+        "要求在隔离 DSH_HOME/独立端口下真实启动并调用工具/命令或操作 UI",
+        "建议负向测试、卸载清理、取消信号和兼容矩阵，不把 boot 成功当作功能通过"
+      ]
     }
   ]
 }
