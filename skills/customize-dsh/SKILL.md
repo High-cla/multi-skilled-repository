@@ -13,6 +13,7 @@ DSH 是"万物皆可插件"的宿主：配置严格校验，格式错误会导�
 
 - **配置目录（所有包的可配字段与默认值）**：<https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/config-catalog.md>（按 `@deepseek-ai/dsh-*` 包分节）
 - **权威来源索引（推荐先读）**：[`references/AUTHORITATIVE-SOURCES.md`](references/AUTHORITATIVE-SOURCES.md)，包含配置、profile/HMR、settings/volatile、skills、agent preset、MCP、tools 的官方文档和源码入口，以及当前上游已核验的默认值差异。
+- **插件开发/打包/发布专项参考**：[`references/PLUGIN-DEVELOPMENT.md`](references/PLUGIN-DEVELOPMENT.md)。涉及 Cordis 插件、纯插件包、bundle、`dsh.client` 双端插件、Git/npm 安装、发布与兼容性验证时必须先按该文档选择形态，并回查当前上游版本。
 - **profile / patch / bundle 分层**：`packages/boot/app-boot/README.md#Profiles`、`apps/cli/reference/README.zh.md`
 - **子系统文档（中文）**：<https://github.com/deepseek-ai/deepseek-harness/tree/master/docs/subsystems>（settings、skills、tools、permission-presets、system-prompt、approval、sandbox、agent-lifecycle）
 - **组合与 HMR**：`docs/cordis-tutorial/06-composition-and-hmr.zh.md`
@@ -183,6 +184,10 @@ user-invocable: true              # 可选，默认 true
 
 ## 插件（cordis package）与自定义工具
 
+插件开发与打包不止一种形态：**纯 Cordis 包**是单个功能模块；**bundle**通过 `dsh.bundle.patch` 分发一组配置层；需要 Web UI 时还可增加 `dsh.client` 浏览器端。Skill 是文件系统发现资源，MCP server 是通过官方 MCP client 配置的外部服务，二者都不是 npm bundle。不要把 Claude Code 的 `.claude-plugin/plugin.json` 或社区市场自定义清单当成 DSH 核心规范。
+
+**开发前先读** [`references/PLUGIN-DEVELOPMENT.md`](references/PLUGIN-DEVELOPMENT.md)：它包含官方外部插件 manifest、Cordis entry、tool schema、双端模块、Git prepare 信任边界、发布和真实运行验证流程。不要把 DSH monorepo 内部 package checklist 当成外部插件模板。
+
 - **最小插件形态**（cookbook adding-a-tool）：
 
 ```ts
@@ -214,7 +219,7 @@ export function apply(ctx: Context) {
 - `defineTool` 在 execute 前按 `ParameterSchemaSpec` 校验参数（类型/必填/字面量/oneOf）；`output.schema` 声明规范 JSON 值；抛异常即 `isError`；必须遵守 `exec.signal`；dispose 插件 fiber 即注销工具
 - **Code Mode**：`tools` 插件 config 的 `mode: 'native' | 'code' | 'both'`（`both` 下模型可写 TS/Python 程序经 `run_code` 触达全部工具；`run_code` 是保留名）；工具错误类型 `ToolArgsError`/`ToolOutputError`/`ToolNotFoundError`
 - 插件可配 Config 用 `@deepseek-ai/schemastery` 的 `Schema.object(...)` 导出 `Config`（不要导出普通对象）；**无效配置在加载时失败并给出明确错误**；约定：不同部署可能需要不同值的参数都必须定义为配置字段
-- **挂载通道**：① `dsh.profile.bundles`（随 profile 启动）② `cordis.patch.yml` 的 insert（HMR 热生效）③ 运行时注入（super-injector dev_* 工具，免重启）④ 动态 cordis（`cordis_define`/`cordis_run`，会话级）
+- **挂载通道**：① `dsh.profile.bundles`（bundle 配置层，是否重载取决于 profile/HMR）② `cordis.patch.yml` 的 insert（是否热生效取决于组合树是否启用 HMR；不能一概承诺热更新）③ 运行时注入（仅在相应 super-injector 工具真实存在且权限允许时）④ 动态 Cordis（仅在相应工具/服务真实注册时）。不要把开发注入器当作默认 DSH 能力。
 - 工具注册表按 scope 分层；MCP 工具名为 `mcp__<serverName>__<tool>`，实际可见范围取决于 MCP client 所挂载的注册作用域，不应一概描述为 GLOBAL
 
 ## MCP servers
