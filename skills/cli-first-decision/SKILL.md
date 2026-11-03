@@ -3,10 +3,10 @@ name: cli-first-decision
 description: "多步骤任务的工具选择、执行编排与成本优化协议。适用于本地文件读写、全文与结构搜索、批量处理、符号与调用链分析、API 调试、并行执行、子智能体委派和工具选型。触发词：用哪个工具、怎么执行、先做什么、能否并行、能否合并、批量操作、代码搜索、调用链、影响面、任务委派。"
 metadata:
   author: High-cla
-  version: "3.7"
+  version: "3.8"
 ---
 
-# CLI-First Decision 3.7
+# CLI-First Decision 3.8
 
 ## 1. 目标与原则
 
@@ -272,6 +272,17 @@ GitHub 和 Context7 插件不是本技能的依赖，也不得假设它们已安
 
 并行前计算实际收益：节省的关键路径时间必须大于启动、协调、限流、上下文和结果合并成本。并发数量服从工具服务限制，不设虚构的固定并发数。
 
+### DSH 执行快捷路径
+
+- PTC 子调用只有在当前参数被调度策略明确判定为 concurrency-safe 时才可重叠；未声明、未知或判断失败均按 exclusive 处理。`Promise.all` 只表达并发意图，不保证实际并行。
+- 按当前 runtime 的 `maxParallelSubCalls` 和工具服务限额控制扇出；文档中的默认值有版本属性，执行时核对当前配置，不硬编码为通用常量。
+- 需要保留部分成功结果时用 `Promise.allSettled` 或逐项 `try/catch`；聚合失败后先检查已发生的副作用，再决定恢复方式。
+- FastCtx 前台命令预计超过四分钟时使用 `run_background`；通过 `job_list` / `job_output` 跟踪，确认终态和退出结果后再验收；仅对核实过的 job id 使用 `job_kill`。
+- 同源 API 支持批量时优先批量；可通过 stdin/stdout 合并时优先管道。不要为了并发拆散本可一次完成的请求。
+- PTC 程序内筛选、裁剪和聚合中间结果，只返回决策需要的字段；把图像和 `additionalContexts` 等可能单独转发的内容也计入上下文预算。
+
+详细的端到端执行顺序、后台任务生命周期、渐进式上下文读取、缓存失效和失败恢复见 [EXECUTION-EFFICIENCY.md](references/EXECUTION-EFFICIENCY.md)。
+
 ### 写入边界
 
 派发前记录每个执行者的 Read、Write 和共享接口范围。写入集合有交集时拆开或串行化；只读任务即使读取相同文件也可并行，但应限制重复输出。
@@ -492,6 +503,7 @@ REPORT:
 | 从零开始选型、架构设计、官方文档调研、架构比较和 ADR/C4 记录 | [ARCHITECTURE-DESIGN.md](references/ARCHITECTURE-DESIGN.md) |
 | 架构取舍、工程定律、复杂性和性能决策 | [ENGINEERING-PRINCIPLES.md](references/ENGINEERING-PRINCIPLES.md) |
 | FastCtx、ast-grep、codebase-memory、PTC 路由 | [REFERENCE.md](references/REFERENCE.md) |
+| DSH 端到端效率、PTC 批次、后台作业、上下文预算与恢复 | [EXECUTION-EFFICIENCY.md](references/EXECUTION-EFFICIENCY.md) |
 | 上游项目仓库、官方 CLI 手册、PTC/FastCtx 契约和性能工具依据 | [AUTHORITATIVE-SOURCES.md](references/AUTHORITATIVE-SOURCES.md) |
 
 ### 编程执行底线
@@ -558,7 +570,9 @@ REPORT:
 [ ] 无依赖操作已合理并行
 [ ] 依赖操作按 DAG 分层
 [ ] 写入范围互斥
-[ ] 长任务使用后台任务机制
+[ ] 长任务使用后台任务机制，且已核验 job 终态/退出结果
+[ ] PTC 并发仅用于明确 concurrency-safe 的当前参数，且遵守运行时上限
+[ ] PTC 中间结果已裁剪，未把无关大 payload 带回上下文
 [ ] 异常、Partial 和退出码已处理
 [ ] 绿地项目已记录架构 ADR，必要时提供 C4 Context/Container 图
 [ ] 性能敏感代码已分析时间/空间复杂度与理论下界
