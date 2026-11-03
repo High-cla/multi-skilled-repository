@@ -132,3 +132,10 @@ dsh --profile <name> --dump-config-schema
 - Cordis patch 的 id-targeted 修改会替换目标 entry 的整份 `config`，不是深度合并；先读完整原配置再编辑。
 - `disabled: true` 是保留 entry 但不挂载；不要发明 `disable: { id }` 这种未被当前 patch dialect 支持的操作。
 - 修改后先 dump/validate，再按 profile 是否启用 HMR 决定是否需要重启；不要盲目重启生产会话。
+
+
+
+### 上游版本核验记录
+
+- 本次资料核验日期：2026-11-03。
+- 核验时 `deepseek-ai/deepseek-harness` `master` HEAD：[`ce7073d51254c26cd63b22a60835b8f948deb447`](https://github.com/deepseek-ai/deepseek-harness/commit/ce7073d51254c26cd63b22a60835b8f948deb447)，提交时间 2026-10-29 16:13:15 UTC。该 SHA 仅用于复核本次文档快照，不等于用户安装版本；后续更新需重新读取官方 HEAD / tag。
