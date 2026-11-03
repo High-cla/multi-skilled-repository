@@ -1,7 +1,7 @@
 {
   "skill": "cli-first-decision",
-  "version": "3.7",
-  "description": "Regression cases for DSH PTC contracts, FastCtx versioned MCP behavior, Context7 documentation retrieval, official CLI manuals, programming quality, and speed/memory optimization.",
+  "version": "3.8",
+  "description": "Regression cases for DSH PTC contracts, bounded concurrency, background-job lifecycle, context budgeting, FastCtx behavior, CLI pipelines, and safe recovery.",
   "cases": [
     {
       "id": "E01",
@@ -679,6 +679,56 @@
         "Do not assume YAML parsing is built into PowerShell",
         "Check for an installed YAML module or use a version-verified yq executable",
         "Validate configuration shape and types at the boundary"
+      ]
+    },
+    {
+      "id": "E75",
+      "input": "A DSH PTC program fans out independent tool calls, but the current tools may be exclusive or have parameter-sensitive concurrency rules.",
+      "expected": [
+        "Check each current binding and its arguments against the active concurrency-safety policy",
+        "Only calls explicitly classified as concurrency-safe may overlap; unknown or failed classification is exclusive",
+        "Use the active maxParallelSubCalls/runtime limit rather than assuming a universal fixed concurrency",
+        "Use Promise.allSettled or per-call error handling when partial outcomes must be retained"
+      ]
+    },
+    {
+      "id": "E76",
+      "input": "A FastCtx command is expected to exceed the foreground run limit and can continue while independent work proceeds.",
+      "expected": [
+        "Start it with run_background and retain the returned job_id",
+        "Use job_list/job_output to inspect progress and retrieve output without tight polling loops",
+        "Verify the terminal state and exit result before reporting completion",
+        "Use job_kill only after confirming the exact job_id and that cancellation is appropriate"
+      ]
+    },
+    {
+      "id": "E77",
+      "input": "A PTC program reads many large files and tool results, but the model only needs a few facts to decide the next step.",
+      "expected": [
+        "Keep intermediate values inside the PTC program and filter/map/aggregate before returning",
+        "Return only the fields and excerpts required for the next decision",
+        "Account for image and additionalContexts payloads that may be forwarded independently",
+        "Avoid treating maxOutputBytes or maxMessageBytes as a total cap on internal intermediate objects"
+      ]
+    },
+    {
+      "id": "E78",
+      "input": "The same repository query is repeated during a multi-step task, and someone proposes caching it in ctx.memory.",
+      "expected": [
+        "Do not invent or assume a generic ctx.memory API",
+        "Reuse results already available within the current execution/session when their inputs are unchanged",
+        "For any explicit durable cache, define keys using repository/ref and relevant file/tool versions",
+        "Invalidate cached data when source files, branch/ref, configuration or tool versions change"
+      ]
+    },
+    {
+      "id": "E79",
+      "input": "Several independent read-only checks target the same API and can be requested in one batch; an alternative is to launch many separate calls.",
+      "expected": [
+        "Prefer one batch request when the API supports it",
+        "Otherwise parallelize only independent concurrency-safe calls",
+        "Keep dependency stages serial and preserve enough per-call error information",
+        "Compare critical-path savings against startup, coordination, rate-limit and context costs"
       ]
     }
   ]
