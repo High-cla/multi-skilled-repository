@@ -112,6 +112,6 @@ pnpm 安装加速、Actions 缓存、构建缓存、HMR/文件监听和 watcher 
 
 ## 官方契约入口
 
-- DSH PTC 调度、SDK、并发策略与执行限制：[AUTHORITATIVE-SOURCES.md](AUTHORITATIVE-SOURCES.md#2-dsh--deepseek-harnessptc工具-sdk-与执行管线)。
+- DSH PTC 调度、SDK、并发策略与执行限制：[AUTHORITATIVE-SOURCES.md](AUTHORITATIVE-SOURCES.md)。
 - FastCtx 工具、前后台任务与版本差异：[AUTHORITATIVE-SOURCES.md](AUTHORITATIVE-SOURCES.md#3-fastctx本地仓库-mcp-与-bash-工具)。
 - 本技能的任务路由和主决策流程：[../SKILL.md](../SKILL.md)。
