@@ -2,6 +2,8 @@
 
 > 本文面向 **在 DeepSeek Harness（DSH）中开发、安装、验证和发布扩展的外部作者**。它是工作指南，不替代 DSH 某个具体版本的官方配置目录、类型定义或实现。DSH 仍处于快速演进阶段；每次开发都要先确认目标 DSH 版本，并按本文“权威资料”回查当前版本。
 
+> **上游核验快照（2026-11-03）**：本次核对的 `deepseek-ai/deepseek-harness` `master` HEAD 为 [`ce7073d51254c26cd63b22a60835b8f948deb447`](https://github.com/deepseek-ai/deepseek-harness/commit/ce7073d51254c26cd63b22a60835b8f948deb447)（提交时间 2026-10-29 16:13:15 UTC）。这是文档检索时的源码快照，不是 DSH 发布版本号，也不代表所有已安装版本；实际开发仍须以用户安装版本的 tag/commit、config catalog 和运行时测试为准。
+
 ## 1. 先分清五种装配单位
 
 DSH 中几个名字相似的对象不是同一层：
