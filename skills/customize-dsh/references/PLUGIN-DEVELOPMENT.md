@@ -280,7 +280,18 @@ pnpm 10 对 Git 依赖的构建脚本需要显式授权（通常通过 profile �
 - 对删除、覆盖、发帖、付款、执行外部命令等有副作用的动作，要求清楚的用户授权、可审计结果、备份或回滚路径。
 - 测试未知插件时使用专用用户、临时 profile、隔离目录或容器；不要只凭 README 或下载数判断可信度。
 
-## 10. 值得研究的项目（均为社区项目，非官方规范）
+## 10. 值得研究的项目
+
+### 官方上游源码（第一方实现样例）
+
+先看官方教程，再按需求深入实际 package。源码展示的是当前 master 的实现方式，不保证每个内部 API 都是外部稳定接口。
+
+- [§packages/shell/tool-bash§](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/shell/tool-bash) — 官方工具编写参考点名的生产级工具插件案例；适合研究工具 schema、executor/provider 分层、后台 job 与 sandbox 语义。不要只复制 tool entry 而忽略它依赖的 shell/env/job services。
+- [§packages/bundle/web-app§](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/bundle/web-app) — 官方 Web bundle；§cordis.patch.yml§ 是 profile bundle 层叠、entry 覆盖、完整 config 重述和 client roster 的一手例子。
+- [§packages/client/ui-settings§](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/client/ui-settings) — 官方 client-side settings domain；可研究 Web settings slot、schema/remote service 分离和 feature plugin 接入方式。它是宿主内部扩展包，不是拿来直接作为外部依赖的通用脚手架。
+- [§packages/acp/acp§](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/acp/acp) — 官方 ACP protocol driver；适合研究独立协议进程、session 生命周期、语义事件和取消路径。其 [README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/acp/acp/README.zh.md) 是行为契约入口。
+
+### 社区实现样例（非官方）
 
 下面样例用于学习工程实现，不取代上游文档。版本号、依赖和 API 随项目变化，开始复用前先看当前分支、release 与 DSH 兼容范围。
 
