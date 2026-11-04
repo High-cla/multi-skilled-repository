@@ -158,3 +158,15 @@ done
 ```
 
 此脚本是轻量环境盘点，不替代工具自己的帮助文档；有些工具不支持 `--version`，需要按上游手册使用 `--help` 或 `version` 子命令。版本/参数输出异常时，不要继续猜参数。
+
+
+## 8. GitHub、Context7 与技能发现
+
+- GitHub connector 可用时先按当前 schema 使用；本机 gh 可用时，先 gh --version / gh auth status，再执行仓库操作。
+- gh 用 --json / --jq 获取结构化输出；列表命令显式 --limit；原始 API 用 gh api --paginate。仓库上下文不明确时显式 --repo OWNER/REPO。
+- Context7 connector 可用时先 resolve library ID 再 query；ctx7 CLI 可用时可用 ctx7 search 单步检索，或 ctx7 library → ctx7 docs 两步检索。版本敏感时选择精确 version ID。
+- Agent Skill 检索使用 gh skill search/preview 或 ctx7 skills search/list；执行前检查 CLI 版本和 help。gh skill 当前是 Preview，语法可能变化。
+- 官方技能来源优先：cli/cli/skills/gh、upstash/context7/skills/context7-cli、upstash/context7/skills/find-docs；通用目录规范见 agentskills.io/specification。
+- 安装前检查 owner、license、更新时间、SKILL.md、references、scripts、网络访问和写入副作用；未获授权不安装、不执行脚本。
+- 写入遭权限、审批或安全校验拒绝后停止，不尝试绕过；给用户完整 patch 和人工编辑路径。
+- 细化步骤和官方源地址见 [ONLINE-RESEARCH-AND-SKILLS.md](ONLINE-RESEARCH-AND-SKILLS.md) 与 [AUTHORITATIVE-SOURCES.md](AUTHORITATIVE-SOURCES.md)。

@@ -1,12 +1,12 @@
 ---
 name: cli-first-decision
-description: "多步骤任务的工具选择、执行编排与成本优化协议。适用于本地文件读写、全文与结构搜索、批量处理、符号与调用链分析、API 调试、并行执行、子智能体委派和工具选型。触发词：用哪个工具、怎么执行、先做什么、能否并行、能否合并、批量操作、代码搜索、调用链、影响面、任务委派。"
+description: "多步骤任务的工具选择、CLI 与 MCP 编排、官方文档检索、Agent Skill 发现/验证、批量处理、代码搜索、调用链分析、API 调试、并行执行和安全写入。触发词：CLI 优先、gh、GitHub、Context7、ctx7、官方文档、skills、SKILL.md、工具选型、并行、批量操作、代码搜索、影响面、任务委派。"
 metadata:
   author: High-cla
-  version: "3.8"
+  version: "3.9"
 ---
 
-# CLI-First Decision 3.8
+# CLI-First Decision 3.9
 
 ## 1. 目标与原则
 
@@ -192,6 +192,10 @@ CLI 在 FastCtx 的 run 中执行，不能假设所有命令已安装；必要�
 | JSONL 聚合 | duckdb | 必要时先流式解压 |
 | 任务编排 | just | 先读项目 justfile 或 --list |
 | MCP CLI 退路 | mcp2cli @<name> | 仅限已 bake 且当前可用的 MCP；先查 help/schema |
+| GitHub 仓库/Issue/PR | GitHub connector 或 gh | 当前 connector schema 优先；CLI 显式指定 --repo 并使用结构化输出 |
+| GitHub Agent Skills | gh skill | 检查版本与 help；search/preview/install/publish 当前为 Preview 功能 |
+| 当前库/框架文档 | Context7 connector 或 ctx7 | search 单步检索；library → docs 两步精确检索 |
+| Context7 Skills | ctx7 skills | search/suggest/list；安装或移除前检查来源并取得授权 |
 
 不要为一次简单操作引入新依赖。CLI 不存在时，选择已注册的 FastCtx 或内置工具；不要静默安装工具。
 
@@ -234,25 +238,34 @@ CLI 在 FastCtx 的 run 中执行，不能假设所有命令已安装；必要�
 
 图谱是辅助索引，不是源码事实来源。索引可能过期或不完整；发现缺失、冲突或疑似陈旧时，以当前源码、构建配置和测试为准，并报告索引限制。
 
-## 8. 没有 GitHub / Context7 插件时
+## 8. 远程仓库、官方文档与 Agent Skills
 
-GitHub 和 Context7 插件不是本技能的依赖，也不得假设它们已安装。
+GitHub / Context7 connector 与 gh / ctx7 CLI 都是可选通道，不是所有运行环境的硬依赖。先检查当前注册工具、二进制版本、帮助文本和权限；使用已存在的最短路径，不为使用 CLI 而增加往返。
 
-### 远程 Git 仓库
+### GitHub 仓库与 CLI
 
-- 本地已有 clone：用 git、FastCtx 和项目脚本处理。
-- 公开仓库只读：可用当前可用的浏览器/Web 工具，或 curl 访问公开的官方页面/API。
-- 远程写入：必须存在已认证的 git/CLI/API 通道及所需权限；否则说明阻塞，不得声称已修改。
-- 不要把 GitHub 插件工具名写成必需工具，也不要假设 gh CLI 已安装。
+- 当前会话已注册 GitHub connector 时，按实际工具 schema 读取仓库、文件、PR 和权限；本地终端存在 gh 时，标准仓库/Issue/PR 操作可用 gh。
+- 使用 gh 前检查 gh --version、gh help 和 gh auth status；仓库上下文不明确时显式指定 --repo OWNER/REPO，避免依赖当前目录 remote 推断。
+- 优先使用 gh 命令的 --json / --jq 获取结构化结果；列表命令显式设置 --limit，原始 API 分页使用 gh api --paginate。需要字段未暴露时再用 gh api；不要解析人类表格输出。
+- 认证只检查状态和所需权限，不打印、不回显、不缓存 token；区分 token scopes、仓库角色和 GitHub App 安装权限。只请求完成任务所需的最小权限。
+- 写入前确认仓库、分支、路径、当前 blob SHA、目标内容和可恢复方式。遇到权限拒绝、审批拒绝或安全校验拒绝时停止，不关闭安全校验、不换 curl/token 通道绕过；提供 diff/补丁供用户在 GitHub 网页编辑器粘贴。
 
-### 第三方库文档
+### Context7 文档检索
 
-- 优先项目 lockfile/package manifest 确认版本。
-- 再查该版本的官方文档、官方仓库和发布说明。
-- 只有当前工具列表确实存在 Context7 时才使用 Context7。
-- Context7 不可用时，不得臆造 resolve/query 工具；改查官方资料或明确说明未能验证的 API。
+- 当前会话提供 Context7 connector 时，先解析 library ID 再查询；只有在终端真实存在 ctx7 时才使用 CLI。connector 已经能直接完成时，不必另起 CLI。
+- 单步跨库检索用 ctx7 search；针对确定的库/框架，先用 `ctx7 library <name> "<one topic>"`，再将返回的精确 `/org/project[/version]` ID 传给 `ctx7 docs`。
+- 查询前从 lockfile、manifest 或用户给出的版本确定目标版本；查询主题一次聚焦一个 API/配置/行为。不要把密钥、私有代码、用户数据放进检索词。
+- Context7 用于定位和提取资料，不代替上游官方文档；涉及 API 签名、默认值、安全、兼容性和弃用行为时，打开原始官方文档/源码/release note 核验。
 
-所有外部资料都必须区分已验证事实、推断和未知项。
+### Agent Skills 发现与验证
+
+- 发现技能时可使用 gh skill search / preview，或 ctx7 skills search / suggest / list；先检查 CLI 版本与 --help。gh skill 当前为 Preview，不能假定每个安装版本都支持。
+- 官方技能优先从工具供应商/项目维护者的仓库读取；核对来源组织、维护状态、许可证、更新时间、SKILL.md、引用文件和脚本。搜索排名不是可信度证明。
+- 安装或运行第三方技能前先 preview 并审阅全部脚本与外部调用；没有用户明确要求时不自动安装、不执行未知脚本、不授予额外权限。
+- SKILL.md 按 Agent Skills 规范校验；详细检索流程、命令、源清单和安全门见 [ONLINE-RESEARCH-AND-SKILLS.md](references/ONLINE-RESEARCH-AND-SKILLS.md)。
+
+没有网络或权威来源不可达时，明确报告未完成在线核验；不得将模型记忆包装成当前官方文档。
+
 
 ## 9. 并行、管道与调用合并
 
@@ -295,94 +308,17 @@ GitHub 和 Context7 插件不是本技能的依赖，也不得假设它们已安
 - 为单文件小改启动子智能体。
 - 为形式上的“全并行”制造额外调用。
 
-## 10. DSH PTC：run_code 与运行时 SDK 编排
+## 10. DSH PTC：运行时入口与详细参考
 
-### 10.1 默认使用方式
+仅当当前会话明确启用 PTC 且提供 run_code 与 tools:sdk 时，才使用 PTC 编排。先读取当前 runtime language、SDK 绑定、参数 schema、并发安全策略和资源限制；禁止凭记忆臆造工具名、语言或默认值。
 
-当当前 DSH 会话启用 PTC，且提示上下文提供 `run_code` 与 `tools:sdk` 时，多步骤工具任务可优先用 PTC 编排。**程序语言必须服从当前加载的 `ctx.ptcRuntime.language` 及注入的 SDK 指令**：TypeScript runtime 使用 TypeScript；Python runtime 使用 Python；不要把以下 TypeScript 示例复制到 Python runtime。
+- 简单单步调用直接使用原生工具；多步依赖、批量扇出、程序内筛选/聚合且能降低往返或上下文成本时再使用 PTC。
+- 只让明确标记为 concurrency-safe 的当前参数调用重叠执行；未知/异常一律按 exclusive 串行处理。写同一资源必须串行。
+- 处理部分失败时保留各分支结果；检查已发生副作用后再恢复，不能假设外层失败会回滚。
+- 中间结果留在程序内，筛选/流式处理后只返回决策必需字段；图像与 additionalContexts 等可能独立转发的 payload 也计入上下文预算。
+- 详细的 TypeScript/Python runtime 差异、调度、取消、输出限制和 Session 记录见 [PTC-EXECUTION.md](references/PTC-EXECUTION.md)；版本依据见 [AUTHORITATIVE-SOURCES.md](references/AUTHORITATIVE-SOURCES.md)。
 
-- `run_code` 是 PTC 程序的模型调用入口；以当前 schema 要求传入 `code`、`description` 等字段，不猜测可选参数。程序体语法由当前 runtime 的 instructions 决定。
-- `tools:sdk` 是运行时根据当前 agent 可见工具注册表、策略与 `ctx.ptcRuntime.language` 生成的程序内 SDK。
-- 在程序中通过 `tools.<工具名>(args)` 调用 SDK 中实际提供的绑定。
-- 工具名、参数和返回类型必须以当前会话注入的 SDK 定义为准；不得从其他项目、旧版本或记忆中猜测。
-- PTC-only 模式下，不要绕过 `run_code` 直接调用具名工具；应通过 SDK 绑定进入工具执行流水线。
-- `tools:sdk` 不是外部安装的 GitHub/Context7 插件，也不是进程外驱动 Harness 的 `packages/sdk`；它是 PTC 工具呈现层生成的调用 SDK。
 
-如果当前会话不是 PTC preset，或没有注入 `tools:sdk`，就使用当前真实可用的原生工具调用路径。不要假装 SDK 存在，也不要仅为简单单步操作强行切换模式。
-
-### 10.2 何时使用 PTC
-
-适合：
-- 读多个文件后在程序内筛选、提取、归纳。
-- 多个工具按依赖顺序串联，且中间结果只供程序判断。
-- 根据中间结果执行条件分支、循环或批量处理。
-- 扇出多个独立调用，再在程序内聚合结果。
-- 希望仅把最终摘要或必要结果送回模型上下文。
-
-不必使用：
-- 单个简单工具调用。
-- 必须由模型观察中间结果后再作高层判断的阶段。
-- 用户要求逐步确认或每一步都有外部副作用审批的任务。
-- PTC SDK 未提供所需工具或权限的任务。
-
-### 10.3 编排模式
-
-先读取当前会话的 `tools:sdk`，确认每个绑定的真实名称、参数、返回类型和可见性，再写程序。
-
-以下只是 **TypeScript runtime** 的结构示例；只有当前 `tools:sdk` 明确生成 TypeScript 声明时才使用。`read_file` 不是 DSH 固定工具名，必须换成当前 SDK 实际生成的绑定。Python runtime 应按注入的 Python instructions 写程序，不得直接照抄本例：
-
-~~~~ts
-const paths = [
-  "/project/src/auth.ts",
-  "/project/src/router.ts",
-  "/project/package.json",
-];
-
-const outcomes = await Promise.allSettled(
-  paths.map((path) => tools.read_file({ path }))
-);
-
-// 按路径保留每个成功/失败分支；按当前 SDK 的真实返回类型调整。
-return outcomes.map((outcome, index) =>
-  outcome.status === "fulfilled"
-    ? { path: paths[index], ok: true, preview: String(outcome.value).slice(0, 1200) }
-    : { path: paths[index], ok: false, error: String(outcome.reason) }
-);
-~~~~
-
-若当前 SDK 中没有 `read_file` 或参数不同，必须按注入的签名替换示例；不得把示例名称当成 DSH 固定内置工具。
-
-### 10.4 并发语义
-
-`Promise.all` 表示程序发起并发意图，不代表所有子调用都会并行执行；其中一个调用 reject 会使整个聚合 Promise reject，外层程序失败后 DSH 会取消并 drain 尚未完成的绑定。若必须保留成功分支结果，使用 `Promise.allSettled` 或对每项绑定调用单独 `try/catch`，再分别处理成功/失败结果：
-
-- 只有工具对当前参数明确被标记为 concurrency-safe，才允许实际重叠执行。
-- `isConcurrencySafe(args)` 必须明确返回 `true` 才能进入 parallel；未声明、未知、非法或判断异常均按 exclusive 处理。
-- exclusive 子调用形成串行屏障；不要把有顺序依赖的写操作放进并行批次。
-- 实际并发上限由 `maxParallelSubCalls` 运行时配置控制；参考实现默认值为 10，执行时以当前环境配置为准。
-- 即使多个调用在程序中并发发起，工具执行策略、权限检查和最终结果顺序仍由 DSH 工具流水线管理。
-
-### 10.5 结果与上下文
-
-- 子调用的中间值保留在 PTC 程序内。
-- 通常只有程序外层 logs 和 return value 进入模型上下文。**例外**：成功的图像子调用及工具返回的 `additionalContexts` 可由 dispatcher 独立转发为延迟附加上下文，不一定包含在外层 return/log 中；它们仍消耗模型上下文预算，应把大型图像/附加内容纳入总上下文成本评估。
-- 程序内完成筛选、映射、聚合，只返回决策所需字段。
-- 不要把大文件、完整搜索结果或重复原始输出全部 return。
-- 需要审计的工具操作仍经过完整工具流水线；不要把“中间结果不进上下文”误解为“没有执行记录”。
-
-### 10.6 错误和副作用
-
-- SDK 绑定调用失败会在程序内表现为 `ToolCallError`；可捕获并读取 `toolName` 定位具体失败工具。
-- PTC 程序自身运行失败会作为结构化 `CODE_RUN_FAILED` 结果返回，检查具体错误后再调整程序。
-- `Promise.all` 任一 binding reject 时，聚合结果整体 reject；未捕获时 DSH 会取消并 drain 尚未完成的绑定。需要保存已成功分支时，在可能失败的扇出中使用 `Promise.allSettled` 或逐项捕获，先整理每项成功/失败，再决定是否让程序整体失败。
-- 一个绑定调用失败不代表此前的普通副作用已回滚；不要假设 PTC 提供事务。
-- 程序结束/失败时，运行时会取消并 drain 未完成的绑定调用，但已经产生的外部副作用仍需按工具语义处理。
-- 对写入、提交、发布、删除等非幂等操作，先完成只读预检；将可并行的只读部分与写入阶段分开；失败后先检查实际状态，不盲目重跑。
-- 对多个文件写入，使用明确文件边界并串行处理共享文件；按工具契约验证每个写入结果。
-
-### 10.7 运行时安全边界
-
-Node PTC provider 按所选模式执行 TypeScript；sandbox 能力由实际 provider/宿主策略决定。Python experimental provider 的执行与隔离边界也不能直接套用 Node 结论。不能仅凭 runtime 语言、VM/REPL context 或 worker 线程推断已具备 OS 级文件、网络或进程沙箱能力。通过当前 SDK 绑定调用工具，并遵守工具权限、审批和 sandbox 策略；不要通过程序直接访问 Node API 或子进程来绕过宿主工具边界。
 ## 11. 计划与子智能体
 
 ### 何时写计划
@@ -494,65 +430,21 @@ REPORT:
 
 ## 15. CLI、编程规范与工程原则
 
-本技能不仅负责选择工具，也负责约束工具执行方式和代码交付质量。详细内容按任务类型按需读取，不必每次加载所有参考文档：
+本技能负责选择工具和执行路径；实现细节按任务按需加载，避免把所有规则重复塞入主技能：
 
 | 任务 | 参考文档 |
 |---|---|
-| 命令行工具、命令模板、Windows Git Bash、压缩文件和 diff | [CLI-TOOLS.md](references/CLI-TOOLS.md) |
-| 编写/修改代码、API 设计、错误处理、测试、速度与内存优化 | [PROGRAMMING-RULES.md](references/PROGRAMMING-RULES.md) |
-| 从零开始选型、架构设计、官方文档调研、架构比较和 ADR/C4 记录 | [ARCHITECTURE-DESIGN.md](references/ARCHITECTURE-DESIGN.md) |
-| 架构取舍、工程定律、复杂性和性能决策 | [ENGINEERING-PRINCIPLES.md](references/ENGINEERING-PRINCIPLES.md) |
-| FastCtx、ast-grep、codebase-memory、PTC 路由 | [REFERENCE.md](references/REFERENCE.md) |
-| DSH 端到端效率、PTC 批次、后台作业、上下文预算与恢复 | [EXECUTION-EFFICIENCY.md](references/EXECUTION-EFFICIENCY.md) |
-| 上游项目仓库、官方 CLI 手册、PTC/FastCtx 契约和性能工具依据 | [AUTHORITATIVE-SOURCES.md](references/AUTHORITATIVE-SOURCES.md) |
+| CLI 模板、Windows Git Bash、压缩文件和 diff | [CLI-TOOLS.md](references/CLI-TOOLS.md) |
+| 在线资料、Context7、GitHub CLI、Agent Skills 发现/验证 | [ONLINE-RESEARCH-AND-SKILLS.md](references/ONLINE-RESEARCH-AND-SKILLS.md) |
+| 编写/修改代码、API、错误处理、测试和性能优化 | [PROGRAMMING-RULES.md](references/PROGRAMMING-RULES.md) |
+| 绿地架构、官方调研、候选方案、ADR/C4 | [ARCHITECTURE-DESIGN.md](references/ARCHITECTURE-DESIGN.md) |
+| 工程定律、复杂性和性能取舍 | [ENGINEERING-PRINCIPLES.md](references/ENGINEERING-PRINCIPLES.md) |
+| DSH/FastCtx/ast-grep/codebase-memory 路由 | [REFERENCE.md](references/REFERENCE.md) |
+| PTC 执行细节 | [PTC-EXECUTION.md](references/PTC-EXECUTION.md) |
+| 上游仓库、CLI 手册与规范 | [AUTHORITATIVE-SOURCES.md](references/AUTHORITATIVE-SOURCES.md) |
 
-### 编程执行底线
+执行底线：正确性、安全、数据完整性和已有 API 契约是硬约束；先理解 workload、复杂度和理论下界，再用真实基准、profile、分配与峰值内存数据优化。大数据优先流式、分块和有界队列。绿地项目先调研当前官方文档、比较至少两个可行架构并记录 ADR；既有项目先检查现状和基线。工程原则是决策启发式，不是机械打勾项；细则只在当前任务需要时读取。
 
-- 动手前先检查需求、现有实现、项目约定和触发技能；不在信息不足时猜测架构。
-- 优先项目原生 API、现代语言 API、现有依赖和成熟抽象；不为“现代化”而无收益地升级。
-- 优先小函数、清晰命名、单一抽象层级、早返回；避免深嵌套和魔法值。
-- 不吞异常；在输入边界和契约边界校验；资源确定性释放。
-- 默认不可变、纯函数和组合；仅在确有收益时引入可变状态、继承或复杂抽象。
-- 先测量瓶颈，再优化；性能优化不得破坏正确性、可读性和可维护性。
-- 保持幂等性，明确异步/并发语义、取消、超时和共享状态。
-- 不过度防御：边界处严谨，内部可信契约不重复堆叠无意义检查。
-
-### 具体实现的速度与内存优先规则
-
-- 正确性、安全、数据完整性和既有 API 契约是硬约束；满足硬约束后，默认优先选择更快且峰值内存更低的具体实现。
-- 先推导时间/空间复杂度和当前计算模型下可达到的理论下界；选择对真实 workload 渐近复杂度最优或接近下界的算法。
-- 不能只看 Big-O：同时考虑常数因子、缓存局部性、数据布局、分配/拷贝、GC、分支、IO 和网络往返。
-- 主动 benchmark + profile/trace + heap/allocation 分析，围绕真实热点反复优化；每轮都要回归测试，并复测时间和峰值内存。
-- 大数据优先流式、分块、有界队列和紧凑表示；减少无效物化、重复缓冲区、临时对象和数据复制。
-- 用户明确要求性能优先时，不以“过早优化”为由跳过性能设计和测量；允许热点使用低层优化，但要隔离、说明并证明收益。
-- 对“理论最快最省”给出模型、假设和下界；无法形式证明时，报告当前环境与 workload 下测得的最佳结果，不作绝对保证。
-
-### 从零开始的架构先行规则
-
-- 全新项目不得直接跳到编码或按熟悉度选框架；先读取 [ARCHITECTURE-DESIGN.md](references/ARCHITECTURE-DESIGN.md)，完成需求、质量属性、官方网络文档调研和候选架构比较。
-- 既有代码库不是绿地项目：先检查当前架构、依赖、数据流、运行/部署方式和性能基线；只有用户要求重建或现架构无法满足硬约束时，才从零重选。
-- “最优架构”必须针对明确 workload、延迟/吞吐、峰值内存、数据规模、一致性、可靠性、安全、交付周期、团队能力和运维约束定义；不存在脱离约束的通用最优架构。
-- 必须使用当前可用的 Web/Search/浏览器能力查找目标技术栈的官方文档、版本说明、规范和成熟参考架构；核对版本与发布日期，记录来源 URL 和依据。网络不可用时明确报告，不能假装完成调研。
-- 至少比较两个真正可行的方案，保留最简单基线；按硬约束淘汰，再按性能/内存优先级和其他质量属性进行有依据的权衡。
-- 对关键性能、数据一致性、扩展性、故障隔离或运维假设先做小型验证/基准，不以未经验证的架构图直接进入大规模实现。
-- 形成架构决策记录（ADR）；需要沟通系统边界时使用 C4 Context/Container 图，只有确有价值时再细化组件、代码或部署图。
-
-### 工程原则使用规则
-
-- KISS / YAGNI：先实现最小可运行方案，再按真实需求演化。
-- DRY：只抽取稳定且真正重复的知识，不为消除几行重复制造耦合。
-- SOLID / 高内聚低耦合：用于划分职责和依赖，不要求每个函数都创建接口。
-- 面向接口、组合优于继承：在需要替换、测试或隔离变化时使用。
-- 单一事实来源 / CQRS：避免重复权威状态；读写职责明显分离时再应用。
-- 最小惊讶 / 约定优于配置：默认行为可预测，例外必须显式记录。
-- Gall、Worse is Better、第二系统效应：渐进演化，警惕一次性过度设计。
-- Hyrum 定律：公开行为要考虑兼容性，尤其是已有调用方依赖的边界。
-- 阿姆达尔定律：先确定总耗时中的瓶颈占比，再决定优化重点。
-- 复杂性守恒 / 抽象漏洞：说明复杂度被转移到实现、调用方、配置还是运维；抽象不能替代底层理解。
-- 第一性原理 / 奥卡姆 / Pareto：先找关键约束，只保留能显著改善结果的实体和工作。
-- 破窗 / 墨菲 / 防御性编程：修复已知坏味道，在真正的失败边界设置保护，不在所有地方堆防御代码。
-
-以上原则是决策工具，不是机械检查项。原则冲突时以用户目标、已存在契约、风险和可验证证据为准。
 
 ## 16. 快速检查清单
 
@@ -565,7 +457,10 @@ REPORT:
 [ ] 本地文件优先 FastCtx
 [ ] 结构搜索使用 ast-grep
 [ ] 符号/调用链使用 codebase-memory
-[ ] GitHub / Context7 不作为默认依赖
+[ ] GitHub / Context7 不作为默认依赖；先检查 connector / CLI 的真实可用性
+[ ] 当前 API/CLI 文档已按 lockfile 版本经 Context7 定位，并回到官方原文核验关键事实
+[ ] Agent Skill 来源、脚本、许可证和 SKILL.md 已审阅；验证前未盲目安装或执行
+[ ] GitHub 写入使用最小权限；安全校验或审批拒绝后不尝试绕过
 [ ] 同源请求已批量化
 [ ] 无依赖操作已合理并行
 [ ] 依赖操作按 DAG 分层
