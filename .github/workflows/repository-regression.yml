@@ -153,20 +153,20 @@ jobs:
 
           skill_text = Path("skills/cli-first-decision/SKILL.md").read_text(encoding="utf-8")
           frontmatter_match = re.match(
-              r"\\A---\\s*\\n(.*?)\\n---(?:\\s*\\n|\\Z)",
+              r"\A---\s*\n(.*?)\n---(?:\s*\n|\Z)",
               skill_text,
               flags=re.DOTALL,
           )
           assert frontmatter_match is not None, "SKILL.md frontmatter is missing or malformed"
 
           metadata_match = re.search(
-              r"(?m)^metadata:\\s*\\n((?:[ \\t]+[^\\r\\n]*(?:\\r?\\n|$))*)",
+              r"(?m)^metadata:\s*\n((?:[ \t]+[^\r\n]*(?:\r?\n|$))*)",
               frontmatter_match.group(1),
           )
           assert metadata_match is not None, "SKILL.md metadata mapping is missing"
 
           version_match = re.search(
-              r"""(?m)^  version:\\s*(?:"([^"]+)"|'([^']+)'|([^#\\s]+))\\s*(?:#.*)?$""",
+              r"""(?m)^  version:\s*(?:"([^"]+)"|'([^']+)'|([^#\s]+))\s*(?:#.*)?$""",
               metadata_match.group(1),
           )
           assert version_match is not None, "SKILL.md metadata.version is missing or invalid"
