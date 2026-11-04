@@ -176,7 +176,35 @@ Context7 检索到的 jq/ripgrep/Bash 行为须按目标版本复核：jq `--slu
 - [Python tracemalloc](https://docs.python.org/3/library/tracemalloc.html) — Python 分配跟踪；仅用于 Python runtime。
 - [C4 Model](https://c4model.com/)、[AWS ADR process](https://docs.aws.amazon.com/prescriptive-guidance/latest/architectural-decision-records/adr-process.html) — 架构图和决策记录；详见 [ARCHITECTURE-DESIGN.md](ARCHITECTURE-DESIGN.md)。
 
-## 8. 最终核验清单
+## 8. GitHub CLI、Context7 CLI 与 Agent Skills
+
+### GitHub CLI 与官方 Agent Skill
+
+- [GitHub CLI 官方仓库](https://github.com/cli/cli) — GitHub 维护的命令行工具，当前支持 GitHub.com、Enterprise Cloud 和受支持版本的 Enterprise Server。
+- [GitHub CLI Manual](https://cli.github.com/manual/) — 每条命令的当前参数、退出码和平台差异；以已安装 gh --help / --version 为最终执行依据。
+- [gh auth status](https://cli.github.com/manual/gh_auth_status) · [gh api](https://cli.github.com/manual/gh_api) — 当前 host/account、认证来源、REST/GraphQL 请求和分页。
+- [gh skill](https://cli.github.com/manual/gh_skill) · [gh skill install](https://cli.github.com/manual/gh_skill_install) — 从 GitHub 仓库搜索、预览、安装、更新和发布 Agent Skills。该命令组当前标注为 Preview，必须先核验本机版本及 --help。
+- [GitHub CLI 官方 gh skill](https://github.com/cli/cli/blob/trunk/skills/gh/SKILL.md) — 官方给 coding agent 的 JSON 输出、分页、仓库定向、search/list 与 gh api 使用模式。
+
+### Context7 官方 CLI 与技能
+
+- [Context7 CLI 官方文档](https://context7.com/docs/clients/cli) — ctx7 search、library、docs、安装、Node.js 要求、认证、JSON 输出和 setup。
+- [Context7 官方源码仓库](https://github.com/upstash/context7) — 核对 CLI 与 MCP 的实现和发布版本。
+- [Context7 CLI 官方技能](https://github.com/upstash/context7/blob/master/skills/context7-cli/SKILL.md) — ctx7 文档检索、Skills 管理和 Context7 配置。
+- [Context7 官方 find-docs 技能](https://github.com/upstash/context7/blob/master/skills/find-docs/SKILL.md) — resolve library ID → query docs 的标准工作流。
+- [Context7 CLI 文档命令参考](https://github.com/upstash/context7/blob/master/skills/context7-cli/references/docs.md) — search、library、docs、版本 ID、query 质量和 JSON 管道行为。
+
+### Agent Skills 通用规范与验证
+
+- [Agent Skills Specification](https://agentskills.io/specification) — SKILL.md frontmatter、目录结构、渐进式披露、引用文件与验证规则。
+- [Agent Skills 规范源码](https://github.com/agentskills/agentskills/blob/main/docs/specification.mdx) — 规范的可审阅源文件。
+- [skills-ref validator](https://github.com/agentskills/agentskills/tree/main/skills-ref) — 官方参考验证工具；用 skills-ref validate <skill-directory> 检查 frontmatter 和目录命名约束。
+
+### 使用边界
+
+Context7 是文档索引，不是官方真相来源；gh skill / ctx7 skills 的检索结果也不是安全审查。先定位官方来源，再读取原始 SKILL.md、引用文档和脚本；检查版本与许可证。gh skill 当前为 Preview，CLI 语法和可用性必须按本机版本确认。
+
+## 9. 最终核验清单
 
 - [ ] 已确认机器/会话实际可见的工具名称和 schema。
 - [ ] 已确认 CLI binary/version/path，而不是只依据 PATH alias 名称。
@@ -185,3 +213,6 @@ Context7 检索到的 jq/ripgrep/Bash 行为须按目标版本复核：jq `--slu
 - [ ] FastCtx 版本与 README/release tag 对齐；尤其复核 glob/replace/shell 行为。
 - [ ] 所有需要非交互执行的命令都在无 TTY 条件下验证。
 - [ ] 对性能/内存敏感路径用 profiler/benchmark 证据，而不是宣传数字或主观感觉。
+- [ ] GitHub CLI 认证 host/account、目标仓库和最小权限已核验，且未泄露 token。
+- [ ] Context7 的目标 library ID/version 已解析，关键事实已回到官方原文核验。
+- [ ] 安装任何 Agent Skill 前已预览来源、脚本、副作用和许可证。
