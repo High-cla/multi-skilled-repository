@@ -104,7 +104,7 @@ gh api repos/OWNER/REPO/pulls --paginate
 - metadata 应为字符串键值；compatibility 仅在确有环境要求时填写；不要虚构 allowed-tools 权限。
 - 主 SKILL.md 正文建议低于 5000 tokens、文件低于 500 行；长篇手册移入 references/，正文仅保留路由和关键决策。
 - 从 SKILL.md 引用 references/scripts/assets 时使用相对路径；保持一层引用结构，避免 references 内继续深层链接链。
-- 用 Agent Skills 官方 validator：skills-ref validate <skill-directory>。若 gh skill publish 存在，可先 gh skill publish --dry-run；该 CLI 子命令目前处于 Preview，验证结果不能替代实际兼容性测试。
+- 用 Agent Skills 官方 validator：`skills-ref validate <skill-directory>`。`skills-ref` 是官方参考/演示验证器，官方 README 明确说明它不面向生产环境；因此只能作为基础格式检查，不能视为完整的生产级校验。还需独立检查本地链接、Markdown 结构、evals、脚本安全和实际运行时兼容性。若 `gh skill publish` 存在，可先 `gh skill publish --dry-run`；该 CLI 子命令目前处于 Preview，验证结果不能替代实际兼容性测试。
 
 ### 官方技能优先策略
 

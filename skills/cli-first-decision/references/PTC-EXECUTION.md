@@ -2,7 +2,6 @@
 
 本文承载 CLI-First Decision 中 DSH PTC 的详细执行契约。具体运行时能力必须以当前会话注入的 tools:sdk、工具 schema、安装版本和官方源码为准。
 
-# DSH PTC：run_code 与运行时 SDK 编排
 
 ## 1 默认使用方式
 
