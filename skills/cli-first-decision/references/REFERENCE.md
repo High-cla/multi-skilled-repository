@@ -1,4 +1,4 @@
-# CLI-First Decision 3.7 — Reference
+# CLI-First Decision 3.9 — Reference
 
 本参考表以 DSH 环境提供的信息为基准。工具调用前仍需确认当前注册状态和参数 schema；未注册的可选工具不得假设存在。
 
@@ -157,58 +157,7 @@ FastCtx grep / rg / sg 核查当前源码
 
 ## 9. DSH PTC：run_code 与自动生成的 tools:sdk
 
-PTC 的权威定义来自 DSH 当前安装版本的 `@deepseek-ai/dsh-tools`、`@deepseek-ai/dsh-tool-executor-ptc`、工具目录和当前会话注入的 `tools:sdk`。先读 [AUTHORITATIVE-SOURCES.md](AUTHORITATIVE-SOURCES.md) 的 DSH 部分。
-
-### 9.1 调用入口与 SDK
-
-- PTC presentation 下，模型直接调用的执行入口是 `run_code`；其它当前可见的工具由运行时按 `ctx.ptcRuntime.language` 生成程序内 SDK。
-- 当前官方 `run_code` schema 要求 `code` 与 `description` 两个字段。TypeScript runtime 的 `code` 是异步函数体，支持顶层 `await` / `return`，但只支持可擦除类型语法。
-- SDK 的类型渲染语言由加载的 PTC runtime 决定；`dsh-tools` 当前包含 TypeScript 与 Python renderer。已发布 Node provider 执行 TypeScript；Python runtime 是需显式组合的实验包，目前没有发布 profile 默认启用，且不提供与 Node provider 相同的文件约束。**不得假设所有 DSH PTC 环境恒为 TypeScript 或具有相同 sandbox 能力。**
-- 以本会话展示的 `tools:sdk` 声明为准，精确核验工具名称、参数、返回类型和可见范围。不要复制旧会话的 schema，不要自行创造工具名。
-- PTC-only 模式中不能把 SDK 绑定误认为模型顶层工具；应通过 `run_code` 内的 `await tools.<tool_name>(args)` 进入调用流水线。
-- `packages/sdk`（进程外驱动 Harness）与 PTC 自动生成的 `tools:sdk`（程序内调用当前 agent 工具）不是同一概念。
-
-### 9.2 PTC 示例
-
-以下只是结构示例；`read_file` 不是 DSH 固定工具名，必须换成当前 SDK 实际生成的绑定：
-
-~~~~ts
-const paths = ["/project/a.ts", "/project/b.ts"];
-const contents = await Promise.all(
-  paths.map((path) => tools.read_file({ path }))
-);
-return contents.map((content, index) => ({
-  path: paths[index],
-  chars: content.length,
-  preview: content.slice(0, 800),
-}));
-~~~~
-
-工具参数的序列化、返回值和类型限制以当前生成 SDK 与 DSH 工具 schema 为准。SDK 中的类型提示不是运行时验证的替代品。
-
-### 9.3 并发调度
-
-- DSH 当前 `@deepseek-ai/dsh-tool-executor-ptc` 文档将 `maxParallelSubCalls` 默认值列为 10，且必须是正整数；设为 1 即串行。根 `run_code` 调用本身是 exclusive；该上限约束每个程序内部并行安全的嵌套调用。该默认值具有版本属性，不要假设未来或定制 runtime 固定不变。
-- `Promise.all` 只代表程序发起并发意图，不保证子调用一定同时执行。
-- 只有工具当前参数被调度策略判定为 parallel 时才允许重叠；exclusive/未知调用 fail-closed 并形成串行屏障。
-- 共享文件写入、远程副作用、提交/发布/删除等操作不得仅为加速而并行。先拆分只读预检和副作用阶段。
-- 调用结果的外层顺序/关联由 DSH 管线维护；不要通过程序端 Promise 完成顺序推断安全顺序。
-
-### 9.4 结果、内存与输出
-
-- PTC 子调用的 canonical binding 对象只存在于执行环境，不能从 Session replay 还原，且没有字节数上限；但 DSH 会把 `tool/ptc-dispatch-start` / `tool/ptc-dispatch` 事件作为 log-only 事件持久化，其中包含工具名、规范化参数和渲染后的结果/错误，供审计与 UI 使用，不重新进入模型 transcript。
-- 大文件/大响应应在程序内筛选、流式或分块处理、汇总必要字段；及时解除不再使用的引用，避免把所有完整结果保存在数组中。注意：PTC executor 明确说明中间 binding 值没有字节数上限；Node 的 `maxMessageBytes` 只约束控制消息、待处理 binding 参数字节和控制写队列，`maxOutputBytes` 才约束外层 logs/完成值/诊断。`maxOldGenerationSizeMb` 也不是全进程 RSS 上限。
-- 通常只有外层 `run_code` 的返回值/log 进入模型上下文；成功的图像子调用及工具 `additionalContexts` 也可能由 dispatcher 独立转发，须把它们计入上下文预算。PTC 子调用的 log-only 事件持久化但不重新进入模型 transcript。外层输出受 Node provider 输出预算限制；只返回模型决策所需信息。
-- 控制输出体积不等于控制程序内存。程序内部仍需显式设定数据规模和缓存上限。
-
-### 9.5 超时、安全与副作用
-
-- Node provider 提供 `per-call`（默认，异步函数体/每次新进程）、`vm-script`（Script 语法，可选 `scriptPersistence` 为每个 owner 保留 context）和 `persistent-in-memory`（每 Agent REPL）三种执行模式。其 `timeoutMs` 默认 120,000 ms、最大 600,000 ms；`maxOldGenerationSizeMb` 默认 512 MiB（V8 old-generation heap，不是全进程 RSS 上限）、`maxOutputBytes` 默认 64 MiB（外层 logs/完成值/诊断预算）、`maxMessageBytes` 默认 128 MiB（控制消息、未完成 binding 参数字节和排队控制写入）、`maxPendingCalls` 默认 128。它们都是 Node provider 版本配置；尤其 `maxMessageBytes` 不会限制任意中间返回对象图，不能当成中间值总内存上限。
-- 更宽的 `sandbox_permissions` 需要解释理由并经审批；权限只适用于该次执行。嵌套工具仍遵守自身策略与审批。
-- Runtime 的 isolation/substrate 描述不能单独证明 OS 级安全隔离。检查当前 PTC provider、实际 sandbox mode 和执行结果报告的 enforcement facts；按 DSH sandbox policy 操作，不通过 Node API 或子进程绕过宿主权限。
-- 对于取消和失败，区分外层代码异常、超时/取消、SDK 子工具错误和 sandbox 拒绝。工具定义若要求协作式取消，应观察传入的 signal。
-- SDK 子调用失败可通过 `ToolCallError` 与 `toolName` 识别具体失败工具；外层程序失败按当前 runtime 的错误分类处理。
-- `Promise.all` 中任一 binding reject 会使聚合 Promise reject；未捕获时 DSH 会取消并 drain 尚未完成的调用。需要保留成功分支时用 `Promise.allSettled` 或逐项捕获，再决定整体错误处理。普通文件/网络/提交等副作用不会因为 PTC 程序失败而自动回滚。失败后先核对实际状态，不盲目重试，不假设事务或 exactly-once。
+PTC 的权威定义来自 DSH 当前安装版本及当前会话注入的 `tools:sdk`；版本依据见 [AUTHORITATIVE-SOURCES.md](AUTHORITATIVE-SOURCES.md)。运行入口、SDK schema、并发调度、结果与上下文处理、错误取消和副作用边界统一维护在 [PTC-EXECUTION.md](PTC-EXECUTION.md)。本文件仅保留工具路由与快速参考，避免重复定义 PTC 运行时语义。
 
 ## 10. 验收记录
 
