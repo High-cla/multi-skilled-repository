@@ -1,5 +1,9 @@
 name: Repository regression
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
@@ -8,7 +12,88 @@ on:
   pull_request:
 
 jobs:
+  changes:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    outputs:
+      python: ${{ steps.filter.outputs.python }}
+      windows: ${{ steps.filter.outputs.windows }}
+      agent: ${{ steps.filter.outputs.agent }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Classify changed paths
+        id: filter
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            base_sha="$PR_BASE_SHA"
+          else
+            base_sha="$BEFORE_SHA"
+          fi
+
+          force_all=false
+          if [[ -z "$base_sha" || "$base_sha" =~ ^0+$ ]]; then
+            changed_files="$(git ls-tree -r --name-only "$HEAD_SHA")"
+          else
+            if ! git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
+              if ! git fetch --no-tags --depth=1 origin "$base_sha"; then
+                echo "::warning::Could not fetch the comparison base; running all test jobs."
+                force_all=true
+              fi
+            fi
+
+            if [[ "$force_all" == "true" ]]; then
+              changed_files="$(git ls-tree -r --name-only "$HEAD_SHA")"
+            else
+              changed_files="$(git diff --name-only "$base_sha" "$HEAD_SHA")"
+            fi
+          fi
+
+          python_changed=false
+          windows_changed=false
+          agent_changed=false
+
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+
+            case "$file" in
+              .github/workflows/*)
+                python_changed=true
+                windows_changed=true
+                agent_changed=true
+                ;;
+              skills/cli-first-decision/*|requirements-agent-skill-validation.txt)
+                agent_changed=true
+                ;;
+              skills/game-item-spawner/scripts/*.py|skills/game-item-spawner/tests/*)
+                python_changed=true
+                ;;
+              skills/game-item-spawner/scripts/spawn_server.cs|skills/cmd-powershell-pitfalls/*)
+                windows_changed=true
+                ;;
+            esac
+          done <<< "$changed_files"
+
+          {
+            echo "python=$python_changed"
+            echo "windows=$windows_changed"
+            echo "agent=$agent_changed"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Changed files:"
+          printf '%s\n' "$changed_files"
+          echo "Selected jobs: python=$python_changed windows=$windows_changed agent=$agent_changed"
+
   python-ubuntu:
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,6 +109,8 @@ jobs:
         run: python -m unittest discover -s skills/game-item-spawner/tests -v
 
   python-windows:
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,16 +126,18 @@ jobs:
           python -m unittest discover -s skills/game-item-spawner/tests -v
 
   agent-skill-validation:
+    needs: changes
+    if: needs.changes.outputs.agent == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-agent-skill-validation.txt
       - name: Install pinned Agent Skills reference validator
-        run: >-
-          python -m pip install
-          "git+https://github.com/agentskills/agentskills.git@69ef37e9424c0a7ea9dd2293b559e43ec8176379#subdirectory=skills-ref"
+        run: python -m pip install -r requirements-agent-skill-validation.txt
       - name: Validate cli-first-decision skill
         run: skills-ref validate skills/cli-first-decision
       - name: Validate declarative eval dataset structure
@@ -81,6 +170,8 @@ jobs:
           PY
 
   windows-shell-regression:
+    needs: changes
+    if: needs.changes.outputs.windows == 'true'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
