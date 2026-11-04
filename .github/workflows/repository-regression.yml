@@ -150,7 +150,35 @@ jobs:
           path = Path("skills/cli-first-decision/evals/evals.json")
           data = json.loads(path.read_text(encoding="utf-8"))
           assert data.get("skill") == "cli-first-decision", "unexpected skill name"
-          assert data.get("version") == "3.9", "eval version does not match skill version"
+
+          skill_text = Path("skills/cli-first-decision/SKILL.md").read_text(encoding="utf-8")
+          frontmatter_match = re.match(
+              r"\\A---\\s*\\n(.*?)\\n---(?:\\s*\\n|\\Z)",
+              skill_text,
+              flags=re.DOTALL,
+          )
+          assert frontmatter_match is not None, "SKILL.md frontmatter is missing or malformed"
+
+          metadata_match = re.search(
+              r"(?m)^metadata:\\s*\\n((?:[ \\t]+[^\\r\\n]*(?:\\r?\\n|$))*)",
+              frontmatter_match.group(1),
+          )
+          assert metadata_match is not None, "SKILL.md metadata mapping is missing"
+
+          version_match = re.search(
+              r"""(?m)^  version:\\s*(?:"([^"]+)"|'([^']+)'|([^#\\s]+))\\s*(?:#.*)?$""",
+              metadata_match.group(1),
+          )
+          assert version_match is not None, "SKILL.md metadata.version is missing or invalid"
+          skill_version = next(value for value in version_match.groups() if value is not None)
+
+          eval_version = data.get("version")
+          assert isinstance(eval_version, str) and eval_version, "eval version must be a non-empty string"
+          assert eval_version == skill_version, (
+              f"eval version {eval_version!r} does not match "
+              f"SKILL.md metadata.version {skill_version!r}"
+          )
+
           cases = data.get("cases")
           assert isinstance(cases, list) and cases, "cases must be a non-empty list"
 
