@@ -2,7 +2,7 @@
 
 > 本文面向 **在 DeepSeek Harness（DSH）中开发、安装、验证和发布扩展的外部作者**。它是工作指南，不替代 DSH 某个具体版本的官方配置目录、类型定义或实现。DSH 仍处于快速演进阶段；每次开发都要先确认目标 DSH 版本，并按本文“权威资料”回查当前版本。
 
-> **上游核验快照（2026-11-03）**：本次核对的 `deepseek-ai/deepseek-harness` `master` HEAD 为 [`ce7073d51254c26cd63b22a60835b8f948deb447`](https://github.com/deepseek-ai/deepseek-harness/commit/ce7073d51254c26cd63b22a60835b8f948deb447)（提交时间 2026-10-29 16:13:15 UTC）。这是文档检索时的源码快照，不是 DSH 发布版本号，也不代表所有已安装版本；实际开发仍须以用户安装版本的 tag/commit、config catalog 和运行时测试为准。
+> **上游核验快照（2026-11-05）**：本次核对的 `deepseek-ai/deepseek-harness` `master` HEAD 为 [`fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159`](https://github.com/deepseek-ai/deepseek-harness/commit/fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159)（2026-11-04 08:40 UTC 合入）；该快照的 `apps/cli/package.json` 为 `0.2.2-rc.1`。这是源码快照/预发布版本标识，不等于所有用户已安装版本，也不应直接当作 stable npm 版本；实际开发仍须以用户安装版本的 tag/commit、config catalog 和运行时测试为准。
 
 ## 1. 先分清五种装配单位
 
@@ -125,6 +125,10 @@ schema 约束在加载时校验，缺少必填项或类型错误可能导致插�
 6. 原始 JSON Schema 注册与 `defineTool` 类型 DSL 不同；直接注册原始定义时，插件作者自己承担对应的输入验证责任。
 
 不要自行假设工具在全局可见。工具注册表有 scope；宿主工具、Agent 子树工具与 MCP 工具的可见范围由当前 composition 决定。
+
+### 工具执行器的版本边界（0.2.1-rc.2 及后续版本）
+
+`@deepseek-ai/dsh-tools` 继续负责工具注册，但新版本已移除其 `mode` 与 `maxParallelSubCalls` Config 字段。原生与 PTC 执行分别由 `@deepseek-ai/dsh-tool-executor-native`、`@deepseek-ai/dsh-tool-executor-ptc` 提供；随附 profile 继承 base 的 native executor，自定义 composition 必须在目标 scope 明确挂载一个 executor，同一 scope 不能同时启用两种 executor。PTC executor 需要已挂载的 `ctx.ptcRuntime`；`maxParallelSubCalls` 迁入 PTC executor 配置，`agent-loop.maxParallelToolCalls` 仍是独立批次并发设置。旧 `@deepseek-ai/dsh-agent-tool-presentation` 选择器暂时兼容但已弃用；`DSH_TOOLS_MODE` 不再控制 web/headless/sdk profile。迁移前先读[官方升级指南](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/tool-executor-plugins/guide.zh.md)，不要把旧版 `dsh-tools` Config 复制到新版。
 
 ## 4. 纯 Cordis 包：安装依赖 + profile 显式插入
 
@@ -263,7 +267,7 @@ pnpm 10 对 Git 依赖的构建脚本需要显式授权（通常通过 profile �
 3. **静态检查**：按项目实际脚本运行 typecheck、lint、unit tests、build；不要把测试命令名当作统一的 DSH 标准。
 4. **产物检查**：执行 `pnpm pack` 并检查 tarball 确实包含入口、patch、client bundle、locale/assets 和 license。
 5. **隔离启动**：使用专用临时 `DSH_HOME` 和独立端口启动测试 profile，不要拿日常 `~/.dsh` 或生产会话验证不稳定代码。保留一个可重复使用的私有测试 home，避免并行测试写同一 session store。
-6. **真实组合验证**：运行 `dsh --profile <name> --dump-config`；必要时对可信 profile 检查 `--dump-config-schema`（它会导入组合插件，不是无副作用的纯文本检查）。
+6. **真实组合验证**：运行 `dsh --profile <name> --dump-config`；需要 schema 时可运行 `--dump-config-schema`。该命令不会挂载组合或执行插件 `apply`，但会导入 profile 中的可信模块并可能调用 Config getter/lazy builder；它不运行 transform callback，也不求值 `!!js`，因此仍不要对不可信 profile 使用。Schema dump 不能替代真实启动和 smoke test。
 7. **功能 Smoke test**：至少真实调用一次工具/命令/设置面板；观察真实输出、取消、错误、卸载清理和重启边界。只验证 boot 成功无法证明惰性服务、工具回调或 client bundle 正常。
 8. **负向测试**：用无效 config、缺失依赖、重复 id、错误 client export、不可达 MCP endpoint 等用例确认系统会明确失败，而不是静默报告成功。
 9. **兼容矩阵**：对 README 宣称支持的每个 DSH 版本做安装与 smoke test；API 发生 breaking change 时提高 peer/engines 下限并在 CHANGELOG 说明。
@@ -281,6 +285,12 @@ pnpm 10 对 Git 依赖的构建脚本需要显式授权（通常通过 profile �
 - 测试未知插件时使用专用用户、临时 profile、隔离目录或容器；不要只凭 README 或下载数判断可信度。
 
 ## 10. 值得研究的项目
+
+### 新增的官方项目入口（2026-11 核验）
+
+- [Native tool executor](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/core/tool-executor-native) 与 [PTC executor](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/core/tool-executor-ptc) — DSH 0.2.1-rc.2+ 的明确执行器选择、批次调度、PTC runtime/SDK、取消与清理实现；新组合不再向 `dsh-tools` 设置执行 `mode`。
+- [Agent Team service](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/team/agent-team) 与 [Team task tools](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/team/tool-agent-team) — 共享任务板、CAS 修订、Session 持久化和标准 subagent 树集成；不是工作目录隔离方案。
+- [Plugin Market](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/boot/plugin-market) 与 [market-index validator](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/util/plugin-market-index) — 官方市场读取器和索引格式实现；索引本身未签名，不能把市场条目理解为官方安全审核。
 
 ### 官方上游源码（第一方实现样例）
 
@@ -316,6 +326,9 @@ pnpm 10 对 Git 依赖的构建脚本需要显式授权（通常通过 profile �
 - [官方 client stack 维护约束](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/client/AGENTS.md)：上游 monorepo 内部 client 代码导出、slots、store 与 inject 纪律；属于仓库内开发规则。
 - [官方添加 workspace package checklist](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/cookbook/adding-a-package.zh.md)：**只用于给 DSH 上游 monorepo 本身添加新 package**，不可将其 private/version/workspace 约束套用为外部插件模板。
 - [官方配置目录（生成文件）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/config-catalog.zh.md)：目标版本实际包配置、字段、默认值与 schema 的核验入口。
+- [工具执行器迁移指南（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/tool-executor-plugins/guide.zh.md)：`dsh-tools` 旧执行模式向 native/PTC executor 迁移。
+- [Agent Teams 子系统](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/agent-team.zh.md) 与 [Team tools README](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/team/tool-agent-team/README.zh.md)：持久任务板服务、工具与 Session 模式语义。
+- [Plugin Market README](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/boot/plugin-market/README.zh.md)：Discover / `plugin_market` 工具、可配置索引与市场限制。
 - [DeepSeek Harness 使用条款](https://www.deepseek.com/en/harness/terms-of-use/)：插件安装、权限、隔离与安全使用边界。
 
 通用 Agent Skills 的 `SKILL.md` 目录结构/frontmatter 规范与 DSH 代码插件不是一份规范；编写本仓库技能时另按 [Agent Skills specification](https://agentskills.io/specification) 核对。Claude Code 的 plugin manifest 也不适用于 DSH。
