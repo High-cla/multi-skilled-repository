@@ -232,6 +232,50 @@
         "要求在隔离 DSH_HOME/独立端口下真实启动并调用工具/命令或操作 UI",
         "建议负向测试、卸载清理、取消信号和兼容矩阵，不把 boot 成功当作功能通过"
       ]
+    },
+    {
+      "id": 23,
+      "name": "explicit-tool-executor-migration",
+      "prompt": "把旧 DSH 配置里的 dsh-tools mode 和 maxParallelSubCalls 迁移到当前版本。",
+      "assertions": [
+        "说明新版本 dsh-tools 不再接受 mode 与 maxParallelSubCalls",
+        "原生/PTC 分别使用 dsh-tool-executor-native 与 dsh-tool-executor-ptc，自定义组合必须挂载执行器",
+        "PTC 需要 ctx.ptcRuntime，maxParallelSubCalls 移到 PTC executor，agent-loop.maxParallelToolCalls 是独立设置",
+        "说明旧 dsh-agent-tool-presentation 仍兼容但已弃用，DSH_TOOLS_MODE 不再驱动 web/headless/sdk"
+      ]
+    },
+    {
+      "id": 24,
+      "name": "agent-team-persistent-board",
+      "prompt": "我想在 DSH 里启用 Agent Team，让几个子代理共享任务板。需要哪些包，有什么隔离保证？",
+      "assertions": [
+        "区分 dsh-agent-team 服务包与 dsh-tool-agent-team 工具包",
+        "说明需要标准 subagent 与 subagent-control 工具来创建/发现/通信/中断队友",
+        "新 Session 默认关闭 Team，defaultEnabled 默认 false，maxTasks 默认 256",
+        "明确 Team 成员共享 checkout，writeScopes 仅是路径提示，不提供 worktree 或写锁隔离"
+      ]
+    },
+    {
+      "id": 25,
+      "name": "config-schema-dump-safety",
+      "prompt": "我能否对一个来源不明的 DSH profile 运行 --dump-config-schema？它会启动插件吗？",
+      "assertions": [
+        "--dump-config-schema 输出 JSON Schema，但不挂载组合或运行插件 apply",
+        "说明它仍会导入可信 profile 模块并可能调用 Config getter/lazy builder",
+        "说明不运行 transform callback，也不求值 !!js 表达式",
+        "建议只对可信 profile 使用，并在分享输出前检查默认值和原始错误"
+      ]
+    },
+    {
+      "id": 26,
+      "name": "plugin-market-index-trust",
+      "prompt": "DSH Plugin Market 里显示某个插件可安装，是否说明它是 DeepSeek 官方审核的安全插件？",
+      "assertions": [
+        "区分官方市场客户端/Discover 页面与第三方插件索引条目的来源",
+        "明确索引未签名且描述/元数据属于不可信第三方输入",
+        "要求审查仓库、manifest、engines.dsh、发布产物和安装/prepare 脚本",
+        "说明当前 update-available 不代表支持原地升级，升级路径需卸载后重新安装"
+      ]
     }
   ]
 }
