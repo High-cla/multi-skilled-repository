@@ -17,6 +17,7 @@
 - [配置目录（英文，生成文件）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/config-catalog.md) · [配置目录（中文，生成文件）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/config-catalog.zh.md) — 每个 package 可配置字段、类型、默认值、注入服务和声明源码。生成文件应由仓库脚本维护，不要手工修改。
 - [CLI 行为参考（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/apps/cli/reference/README.zh.md) — profile 初始化、bundle 层、参数边界、dump-config、配置 schema dump。
 - [app-boot package README](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/boot/app-boot/README.md) — profile/bundle composition、HMR 模板差异、启动失败与兼容性门禁。
+- [CLI 行为参考（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/apps/cli/reference/README.zh.md) — 当前 profile boot、`--from-default-profile`、`--dump-config-schema`、插件管理和启动诊断语义。
 - [架构说明](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/architecture.md) — profile、bundle、patch 层的总体模型。
 - [组合与 HMR 教程（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/cordis-tutorial/06-composition-and-hmr.zh.md) — Cordis entry id、disabled、插件重载与配置文件 watcher。
 
@@ -31,6 +32,20 @@
 - [Web Permission settings row](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/client/ui-permission-presets/README.md) — Web「通用设置」中的默认权限行只改变未来会话；当前会话通过 picker 或 `/permission` 切换。
 - [Base profile 权限组合](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/bundle/base/cordis.patch.yml) — 当前 profile entry id 为 `permission`，插件为 `@deepseek-ai/dsh-permission-presets`；配置预设表及可选 `config.defaultPreset` 的位置。
 - [Permission preset Config source](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/interaction/permission-presets/src/index.ts) — `defaultPreset` 是 volatile Config 字段；缺省时按组合后的 sandbox/approval 默认值推断。
+
+### Tool executors / PTC
+
+- [工具执行器迁移指南（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/tool-executor-plugins/guide.zh.md) — `dsh-tools` 从旧 `mode`/`maxParallelSubCalls` 配置迁移到显式 native/PTC executor 的版本边界。
+- [Native executor README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/core/tool-executor-native/README.zh.md) — 原生工具批次执行器。
+- [PTC executor README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/core/tool-executor-ptc/README.zh.md) — `run_code`、生成 SDK、子调用限制、runtime 和取消/清理语义。
+- [旧 tool presentation selector README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/core/agent-tool-presentation/README.zh.md) — 兼容但已弃用；新配置应直接挂载 native 或 PTC executor。
+- [tool executor generated config catalog](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/config-catalog.zh.md#deepseek-aidsh-tool-executor-ptc) — 当前字段声明和默认值；与旧版安装时需按版本对照。
+
+### Agent Teams
+
+- [Agent Teams 子系统（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/agent-team.zh.md) — `ctx.agentTeams` 服务、持久化 task DAG、根 Session 模式与 Web projection。
+- [Agent Team service package README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/team/agent-team/README.zh.md) — `defaultEnabled`、`maxTasks`、启用/恢复边界与限制。
+- [Agent Team tools package README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/team/tool-agent-team/README.zh.md) — `team_task_*` 工具、标准 subagent 依赖与可见性。
 
 ### Skills
 
@@ -54,6 +69,12 @@
 - [MCP connection supervisor](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/mcp/mcp-client/src/connection.ts) — reconnect defaults、backoff、attempt budget。
 - [MCP client generated config catalog](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/config-catalog.zh.md#deepseek-aidsh-mcp-client) — 当前版本字段约束。
 
+### Plugin Market
+
+- [Plugin Market README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/boot/plugin-market/README.zh.md) — Discover 页面、`plugin_market` 工具、索引读取/缓存、安装状态与已知限制。
+- [Plugin Market index validator](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/util/plugin-market-index/README.zh.md) — 索引格式校验；索引内容未签名，条目和版本信息仍属于来源方声明。
+- [Plugin Market tool catalog（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/tool-catalog.zh.md#deepseek-aidsh-plugin-market) — 模型可见工具参数与输出。
+
 ### 自定义工具、系统提示与命令
 
 - [Tools subsystem（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/tools.zh.md) — 工具注册、schema、执行与结果约定。
@@ -63,11 +84,14 @@
 
 ## 当前上游核验得到的关键差异（不要视为跨版本常量）
 
-- HMR 由 profile composition 决定。当前架构文档说明 base bundle 启用 config-only `dsh-hmr`，headless/SDK/ACP 关闭，`sdk-minimal` 不包含；profile patch 可覆盖。CLI 文档对随附模板的行为为准。
+- HMR 由 profile composition 决定。当前架构文档说明 base bundle 启用 config-only `dsh-hmr`，headless/SDK/ACP 关闭，`sdk-minimal` 不包含；profile patch 可覆盖。当前 CLI 还支持 `--from-default-profile` 从随附模板创建/替换自定义 profile；`dsh plugin --profile` 在 profile 缺失时初始化模板或 base-backed profile，并在依赖操作后按 bundle manifest 更新组合层。
 - `ctx.settings` 表单只编辑 volatile Config 字段；普通 Config 仍通过 Cordis patch 管理。不能宣称所有 `settings.yaml` 更改都会热生效。
 - 权限默认值不再通过持续编辑 `$DSH_HOME/settings.yaml` 管理：该文件中的 `permission.defaultPreset` 仅在一次性 legacy import 时读取。当前 Web 用户应使用「通用设置」的 Permission 默认项；部署配置应调整 profile 中 `id: permission` 的 `@deepseek-ai/dsh-permission-presets` Config。该默认只用于新建会话。
 - 旧 `settings.yaml` 在第一次写入前就重命名为 `settings.yaml.imported`，之后再逐 section 导入；不被活动 composition 接受的 section 会记录日志并只保留在该文件中。重命名不表示全部导入成功，必须检查日志和 `.imported` 文件并选择性恢复。
-- local filesystem skill provider 默认 `watch: true`；frontmatter/skill entry 变化触发 catalog refresh，而正文每次 load 重新读取。资源子目录修改不等于 catalog refresh。
+- local filesystem skill provider 默认 `watch: true`；frontmatter/skill entry 变化触发 catalog refresh，而正文每次 load 重新读取。当前 frontmatter 还支持可选 `whenToUse` 与 `metadata`；provider 支持 symlink skill roots/文件，但仍只发现 root 的直接子项。资源子目录修改不等于 catalog refresh。
+- `dsh-tools` 不再接受旧执行 Config 的 `mode` 与 `maxParallelSubCalls`；native/PTC 由 `dsh-tool-executor-native` / `dsh-tool-executor-ptc` 明确选择。随附 profiles 继承 base 的 native executor，自定义 composition 必须挂载 executor；PTC 需要 `ctx.ptcRuntime`。旧 `dsh-agent-tool-presentation` 保留兼容但已弃用，`DSH_TOOLS_MODE` 不再驱动 web/headless/sdk。
+- Agent Teams 由 `dsh-agent-team` 服务包和 `dsh-tool-agent-team` 工具包构成；默认新 Session 关闭，`defaultEnabled` 默认 false，`maxTasks` 默认 256。Team 使用共享 checkout 和普通 subagent 树，不提供 worktree 隔离；`writeScopes` 仅是提示。
+- Plugin Market 客户端由上游提供，但市场索引未签名，插件描述/元数据是第三方输入；`update-available` 当前不提供原地升级，需卸载后安装新版本。
 - MCP client 当前源码默认 `toolCallTimeoutMs = 60000`、`failOnStartupError = false`；`serverName` pattern 为 `[A-Za-z0-9_-]{1,32}`，唯一性按注册 scope 管理，agent scopes 可复用名称。以用户实际版本 config catalog 为准。
 - MCP 当前支持 `stdio` 与 `streamable-http`；不能虚构 `remote` transport。
 - Agent preset 存在不同概念/实现。确认用户指的是目录型 Agent preset 还是 `@deepseek-ai/dsh-agent-preset` 的 Cordis 子插件组合，再选择对应配置路径。
@@ -127,7 +151,7 @@ dsh --profile <name> --dump-config
 dsh --profile <name> --dump-config-schema
 ```
 
-`--dump-config-schema` 会导入组合中的插件以读取 schema；只对可信 profile 使用。dump 输出也不代表命令行 app args 已解析，CLI 文档明确 dump 模式拒绝 app args。
+`--dump-config-schema` 输出 profile entry/patch 的 JSON Schema，**不会挂载组合或运行插件 `apply`**；但它会导入可信模块，并可能调用 Config getter/lazy builder，因此仍只对可信 profile 使用。它不运行 transform callback，也不求值 `!!js` 配置表达式。Schema 输出可能带有声明默认值或原始错误，分享前先检查。dump 模式拒绝 app args，且 schema dump 不是启动成功/运行时行为的证明。
 
 ## 安全与操作约束
 
@@ -141,5 +165,5 @@ dsh --profile <name> --dump-config-schema
 
 ### 上游版本核验记录
 
-- 本次资料核验日期：2026-11-03。
-- 核验时 `deepseek-ai/deepseek-harness` `master` HEAD：[`ce7073d51254c26cd63b22a60835b8f948deb447`](https://github.com/deepseek-ai/deepseek-harness/commit/ce7073d51254c26cd63b22a60835b8f948deb447)，提交时间 2026-10-29 16:13:15 UTC。该 SHA 仅用于复核本次文档快照，不等于用户安装版本；后续更新需重新读取官方 HEAD / tag。
+- 本次资料核验日期：2026-11-05。
+- 核验时 `deepseek-ai/deepseek-harness` `master` HEAD：[`fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159`](https://github.com/deepseek-ai/deepseek-harness/commit/fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159)，于 2026-11-04 08:40 UTC 合入。该快照中的 `apps/cli/package.json` 版本为 `0.2.2-rc.1`；这是源码中的 RC 版本标识，不应推断为用户安装版本或最终 stable npm 版本。此 SHA 仅用于复核本次文档快照；后续更新需重新读取官方 HEAD / tag，并按用户实际安装的版本核验。
