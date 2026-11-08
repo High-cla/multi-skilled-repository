@@ -26,8 +26,8 @@ DSH 是"万物皆可插件"的宿主：配置严格校验，格式错误会导�
 定制前先查权威资料，不要凭记忆猜字段：
 
 - **配置目录（所有包的可配字段与默认值）**：<https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/config-catalog.md>（按 `@deepseek-ai/dsh-*` 包分节）
-- **权威来源索引（推荐先读）**：[`references/AUTHORITATIVE-SOURCES.md`](references/AUTHORITATIVE-SOURCES.md)，包含配置、profile/HMR、settings/volatile、skills、agent preset、MCP、tools 的官方文档和源码入口，以及当前上游已核验的默认值差异。
-- **插件开发/打包/发布专项参考**：[`references/PLUGIN-DEVELOPMENT.md`](references/PLUGIN-DEVELOPMENT.md)。涉及 Cordis 插件、纯插件包、bundle、`dsh.client` 双端插件、Git/npm 安装、发布与兼容性验证时必须先按该文档选择形态，并回查当前上游版本。
+- **权威来源与决策索引（建议先读对应摘要）**：[`references/AUTHORITATIVE-SOURCES.md`](references/AUTHORITATIVE-SOURCES.md)，先按“决策摘要”将任务映射到首选资料，再按证据优先级核实目标版本、有效 profile 和运行时行为；下方按主题列出官方文档、源码与版本差异。
+- **插件开发/打包/发布专项参考**：[`references/PLUGIN-DEVELOPMENT.md`](references/PLUGIN-DEVELOPMENT.md)。先看开头“快速决策摘要”选择 Skill、MCP、纯 Cordis、Bundle、Web 双端或 Profile，再按任务路线阅读对应章节；涉及 Git/npm 安装、发布与兼容性验证时仍须回查用户实际安装版本。
 - **profile / patch / bundle 分层**：`packages/boot/app-boot/README.md#Profiles`、`apps/cli/reference/README.zh.md`
 - **CLI 当前行为**：[`apps/cli/reference/README.zh.md`](https://github.com/deepseek-ai/deepseek-harness/blob/master/apps/cli/reference/README.zh.md)；重点核对 `--from-default-profile`、`--dump-config-schema` 和 `dsh plugin` 的 profile 初始化/依赖管理语义。注意 `--from-default-profile` 会用模板全新副本替换目标 profile，连同已安装依赖与用户 patch 一起删除；执行前先备份整个 `$DSH_HOME/profiles/<name>/`。
 - **工具执行器迁移**：[`tool-executor-plugins` 升级指南](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/tool-executor-plugins/guide.zh.md)，用于确认 `dsh-tools` 的旧执行配置如何迁移到 native/PTC executor；0.2.2-rc.1 还移除了 `both` 混合呈现模式。
