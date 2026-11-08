@@ -209,7 +209,7 @@
       "prompt": "用户通过 Git 安装我的 TypeScript DSH 插件时报 lib/index.js 不存在，能否建议开启 pnpm 构建脚本？",
       "assertions": [
         "解释 Git 安装取得源代码，作者需提供自包含 prepare 构建或分发预构建 npm/tarball",
-        "说明 pnpm 10 allowBuilds 是允许安装阶段执行包代码，执行通常不受 Agent 沙箱保护",
+        "说明 当前上游 pnpm 11（root package pin 11.28.5）的 allowBuilds 是允许安装阶段执行包代码，执行通常不受 Agent 沙箱保护",
         "建议先审查源码/脚本并固定 commit SHA，不应无差别授权"
       ]
     },
@@ -274,7 +274,98 @@
         "区分官方市场客户端/Discover 页面与第三方插件索引条目的来源",
         "明确索引未签名且描述/元数据属于不可信第三方输入",
         "要求审查仓库、manifest、engines.dsh、发布产物和安装/prepare 脚本",
-        "说明当前 update-available 不代表支持原地升级，升级路径需卸载后重新安装"
+        "说明 plugin_market 是只读发现工具，update-available 只是索引状态",
+        "补充 0.2.2-rc.1 的 Plugin Manager updateBundle 独立更新流程、兼容性检查、HMR 恢复尝试及 restart-required 边界"
+      ]
+    },
+    {
+      "id": 27,
+      "name": "from-default-profile-destructive-reset",
+      "prompt": "我可以用 dsh --profile work --from-default-profile web 来补齐缺少的 Web 配置吗？",
+      "assertions": [
+        "--from-default-profile 会用模板全新副本整体替换目标 profile",
+        "明确已安装依赖和用户 cordis.patch.yml 等内容会被删除",
+        "建议先备份整个目标 profile，并按 CLI 文档处理 staging/previous 恢复目录"
+      ]
+    },
+    {
+      "id": 28,
+      "name": "plugin-manager-update-vs-market-status",
+      "prompt": "Plugin Market 显示 update-available，能不能直接用 plugin_market 工具升级？",
+      "assertions": [
+        "明确 plugin_market 是只读索引发现工具，不执行安装或升级",
+        "说明 0.2.2-rc.1 Plugin Manager 另有面向符合条件第三方 bundle 的 updateBundle 流程",
+        "涵盖精确目标版本/engines.dsh/peer 兼容性预检",
+        "涵盖 HMR 更新时尝试恢复旧版本和恢复失败风险，以及无 HMR 的 restart-required",
+        "不把 updateBundle 说成所有包或市场工具均可用"
+      ]
+    },
+    {
+      "id": 29,
+      "name": "node-runtime-minimum-022rc1",
+      "prompt": "我正在使用最新 DSH 源码，Node 22.19 可以继续运行吗？",
+      "assertions": [
+        "指出 0.2.2-rc.1 当前上游要求 Node.js >=24.9.0",
+        "区分 npm/source CLI 与随包携带运行时的 Desktop/SDK",
+        "提醒先确认用户实际安装版本；不要将 RC snapshot 当 stable"
+      ]
+    },
+    {
+      "id": 30,
+      "name": "subpath-plugin-localized-metadata",
+      "prompt": "我发布 my-plugins/search 这种 DSH subpath 插件，为什么 Plugin Manager 不显示 package.json 的 icon 和 description？",
+      "assertions": [
+        "说明 subpath plugin 不读取 package.json，也不继承 package-root 元数据",
+        "要求导出 ./search/locale/*.json 与 ./search/icon",
+        "提到 package-root 插件可用 package.json 顶层 icon 或 ./icon",
+        "说明图标格式、256 KiB 大小限制及包路径约束",
+        "要求检查 files/exports 和实际打包结果"
+      ]
+    },
+    {
+      "id": 31,
+      "name": "agent-team-inbox-message-semantics",
+      "prompt": "Team 成员提交任务后 wait_agent 会自动唤醒所有空闲队友吗？",
+      "assertions": [
+        "说明 Team 使用标准 subagent send_message 向目标 inbox 发送消息",
+        "成功发送只表示 inbox 接受，不代表目标回复",
+        "任务板状态变化不会唤醒空闲 Agent，也不会结束 wait_agent",
+        "需要成员行动时显式发送消息，并正确解释等待的是下一步 inbox 输入"
+      ]
+    },
+    {
+      "id": 32,
+      "name": "filesystem-guard-and-apply-patch-defaults",
+      "prompt": "DSH 0.2.2 默认会阻止模型覆盖未读取或被外部修改的文件吗？apply_patch 默认总会提供吗？",
+      "assertions": [
+        "说明 base 组合默认禁用 fs-observation-policy，read-before-write/stale-file 不是默认强制门禁",
+        "说明 tool-fs.applyPatch schema 默认 false，是否提供取决于组合层覆盖",
+        "指出当前同一上游 HEAD 的 base YAML 与 tool catalog 对 base 是否启用 apply_patch 存在冲突，不作未经核实的单一断言",
+        "建议用目标 profile 的 --dump-config 和真实工具清单验证",
+        "区分仍然存在的 sandbox 与 Review"
+      ]
+    },
+    {
+      "id": 33,
+      "name": "conditional-tools-step-toolset",
+      "prompt": "我的 DSH 扩展监听 system-prompt/assemble 并从 assembly.tools 里删除不适用工具，0.2.2 能继续这样做吗？",
+      "assertions": [
+        "说明应迁移为注册时的 when 条件，读取 modelSelection",
+        "程序化调用用 ctx.tools.resolve({ agent, modelSelection, signal })",
+        "把 toolSet 同时传入 assemble 和 execute batch，并在 settle 后 dispose",
+        "自定义 executor 用 ctx.tools.executable(name, agent, toolSet)",
+        "工具声明与实际执行必须使用同一条件集合"
+      ]
+    },
+    {
+      "id": 34,
+      "name": "removed-both-tool-presentation-mode",
+      "prompt": "我希望一个 DSH Agent 同时把普通工具和 run_code 暴露给模型，应该设置 dsh-tools mode: both 吗？",
+      "assertions": [
+        "说明 0.2.2-rc.1 移除 both 混合工具呈现模式",
+        "只建议按 Agent scope 选择 native 或 PTC executor",
+        "旧 dsh-agent-tool-presentation 兼容但已弃用",
+        "不要把旧 mode 字段写回 dsh-tools Config"
       ]
     }
   ]
