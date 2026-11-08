@@ -270,7 +270,6 @@ GitHub / Context7 connector 与 gh / ctx7 CLI 都是可选通道，不是所有�
 
 没有网络或权威来源不可达时，明确报告未完成在线核验；不得将模型记忆包装成当前官方文档。
 
-
 ## 9. 并行、管道与调用合并
 
 ### 决策表
@@ -321,7 +320,6 @@ GitHub / Context7 connector 与 gh / ctx7 CLI 都是可选通道，不是所有�
 - 处理部分失败时保留各分支结果；检查已发生副作用后再恢复，不能假设外层失败会回滚。
 - 中间结果留在程序内，筛选/流式处理后只返回决策必需字段；图像与 additionalContexts 等可能独立转发的 payload 也计入上下文预算。
 - 仅在当前会话确实启用 PTC、注入 `run_code` 与 `tools:sdk`，且多步编排/批量处理能减少往返或上下文时采用；单步任务直接调用原生工具。runtime 语言、SDK、调度、取消和部分失败语义见 [PTC-EXECUTION.md](references/PTC-EXECUTION.md)，版本依据见 [AUTHORITATIVE-SOURCES.md](references/AUTHORITATIVE-SOURCES.md)。
-
 
 ## 11. 计划与子智能体
 
@@ -434,7 +432,6 @@ REPORT:
 - 非幂等操作失败后盲目重试。
 - 未验证就报告成功。
 
-
 ## 15. CLI、编程规范与工程原则
 
 本技能负责选择工具和执行路径；实现细节按任务按需加载，避免把所有规则重复塞入主技能：
@@ -462,7 +459,6 @@ REPORT:
 - **错误处理与可靠性**：按信任边界区分防御性检查和 Fail Fast；验证外部输入及系统边界，不在可信内部层重复堆叠校验。保留错误上下文、确定性释放资源，并显式处理幂等性、并发和部分成功。
 
 遇到原则冲突时，不按口号机械裁决：先守住正确性、安全、数据完整性和已有契约，再按用户目标、当前 workload、风险与可测证据选择总成本更低的方案。定律适用边界和常见冲突见 [ENGINEERING-PRINCIPLES.md](references/ENGINEERING-PRINCIPLES.md)；代码实现规则见 [PROGRAMMING-RULES.md](references/PROGRAMMING-RULES.md)。
-
 
 ## 16. 快速检查清单
 
