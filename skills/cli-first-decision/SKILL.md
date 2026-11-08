@@ -18,7 +18,7 @@ metadata:
 - 先复用项目原生 API，再考虑额外 wrapper。
 - 无依赖操作同轮并行；可管道合并的操作优先合并。
 - 并行必须考虑调用成本、限流、上下文和写入冲突。
-- 从零开始先进行需求/质量属性分析、网络官方文档调研、候选架构比较和风险原型，再确定架构并开始主体实现。
+- 从零开始先进行需求/质量属性分析、网络官方文档调研、候选架构比较和风险原型，再确定架构并开始主体实现；架构驱动因素、方案比较和 ADR 规则见 [ARCHITECTURE-DESIGN.md](references/ARCHITECTURE-DESIGN.md)。
 - 具体代码实现优先追求更短运行时间和更低峰值内存，先分析复杂度/理论下界，再用基准与剖析迭代逼近最优。
 - 对 DSH/PTC、FastCtx、CLI 和性能工具，优先查阅 [AUTHORITATIVE-SOURCES.md](references/AUTHORITATIVE-SOURCES.md) 中的项目仓库、版本匹配手册和规范；Context7 可用时先解析库 ID、查询目标版本文档，再回到官方原文核验；最后按本机版本/schema 校验。
 - 写操作范围明确、修改最小、可验证、可恢复。
@@ -37,7 +37,7 @@ metadata:
 | 结构搜索、规则、pattern、批量代码改写 | ast-grep |
 | 符号、调用链、依赖、影响面、架构 | codebase-memory |
 | 工具选择、并行、调用合并、是否委派 | cli-first-decision |
-| 写或改代码 | clean-code、coding-standards |
+| 写或改代码 | clean-code、coding-standards；通用实现、契约、测试与性能规范见 [PROGRAMMING-RULES.md](references/PROGRAMMING-RULES.md) |
 | Bug、复现、报错定位 | systematic-debugging |
 | 写计划或执行计划 | writing-plans、executing-plans |
 | 代码审查 | requesting-code-review、receiving-code-review、code-review |
@@ -95,6 +95,8 @@ metadata:
 
 ### Step 4：选择最短工具路径
 
+需要完整工具路由、环境适配和参考入口时，查阅 [REFERENCE.md](references/REFERENCE.md)；本节仍以当前任务的最短可行路径为准。
+
 依次判断：
 
 1. 项目是否已有原生 API/脚本可直接完成？
@@ -120,7 +122,7 @@ metadata:
 
 ## 4. FastCtx 优先：本地文件与命令
 
-本地文件和终端操作优先 FastCtx。不要使用 shell 等价物替代 FastCtx 的专用文件工具。
+本地文件和终端操作优先 FastCtx。不要使用 shell 等价物替代 FastCtx 的专用文件工具。CLI 模板、跨平台命令注意事项和常见命令组合见 [CLI-TOOLS.md](references/CLI-TOOLS.md)。
 
 | 场景 | 首选工具 | 使用规则 |
 |---|---|---|
