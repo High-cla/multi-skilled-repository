@@ -18,9 +18,9 @@ metadata:
 - 先复用项目原生 API，再考虑额外 wrapper。
 - 无依赖操作同轮并行；可管道合并的操作优先合并。
 - 并行必须考虑调用成本、限流、上下文和写入冲突。
-- 从零开始先进行需求/质量属性分析、网络官方文档调研、候选架构比较和风险原型，再确定架构并开始主体实现。
+- 新项目、系统重建或重大架构重设计：先区分绿地与既有系统，明确质量属性和硬约束，调研官方资料、比较可行候选并验证高风险假设；既有系统的局部改动不触发全量重选架构。门禁、取舍和 ADR 见 [ARCHITECTURE-DESIGN.md](references/ARCHITECTURE-DESIGN.md)。
 - 具体代码实现优先追求更短运行时间和更低峰值内存，先分析复杂度/理论下界，再用基准与剖析迭代逼近最优。
-- 对 DSH/PTC、FastCtx、CLI 和性能工具，优先查阅 [AUTHORITATIVE-SOURCES.md](references/AUTHORITATIVE-SOURCES.md) 中的项目仓库、版本匹配手册和规范；Context7 可用时先解析库 ID、查询目标版本文档，再回到官方原文核验；最后按本机版本/schema 校验。
+- DSH/PTC、FastCtx、CLI、库/API 的行为或参数不确定时，先确认当前版本、二进制 help 和工具 schema，再查匹配版本的上游手册/源码；Context7 用于定位资料，不代替官方核验。来源优先级和版本策略见 [AUTHORITATIVE-SOURCES.md](references/AUTHORITATIVE-SOURCES.md)。
 - 写操作范围明确、修改最小、可验证、可恢复。
 - 工具返回成功不等于业务成功；完成必须有证据。
 - 动手前明确目标、非目标和关键假设；存在多种实质解释时说明差异，不要默默替用户做重大取舍。若不确定性会改变范围、数据语义、接口或安全边界，先澄清再执行。
@@ -37,7 +37,7 @@ metadata:
 | 结构搜索、规则、pattern、批量代码改写 | ast-grep |
 | 符号、调用链、依赖、影响面、架构 | codebase-memory |
 | 工具选择、并行、调用合并、是否委派 | cli-first-decision |
-| 写或改代码 | clean-code、coding-standards |
+| 写或改代码 | clean-code、coding-standards；先读现有实现并明确契约/验收条件，边界、错误、资源、并发和性能规则见 [PROGRAMMING-RULES.md](references/PROGRAMMING-RULES.md) |
 | Bug、复现、报错定位 | systematic-debugging |
 | 写计划或执行计划 | writing-plans、executing-plans |
 | 代码审查 | requesting-code-review、receiving-code-review、code-review |
@@ -95,6 +95,8 @@ metadata:
 
 ### Step 4：选择最短工具路径
 
+先按本节六步流程选择最短路径；只有任务分类不清、首选工具不可用或需要降级路线时，再查 [REFERENCE.md](references/REFERENCE.md) 的工具路由与 fallback。它是决策辅助索引，不是每次任务都要额外读取的步骤。
+
 依次判断：
 
 1. 项目是否已有原生 API/脚本可直接完成？
@@ -120,7 +122,7 @@ metadata:
 
 ## 4. FastCtx 优先：本地文件与命令
 
-本地文件和终端操作优先 FastCtx。不要使用 shell 等价物替代 FastCtx 的专用文件工具。
+本地文件读取、搜索、替换优先用 FastCtx 专用能力；需要组合过滤、转换、批处理或 stdin/stdout 管道时再用 CLI，并先确认命令真实可用且不改变数据语义。模板、PATH/别名和跨平台边界见 [CLI-TOOLS.md](references/CLI-TOOLS.md)。
 
 | 场景 | 首选工具 | 使用规则 |
 |---|---|---|
@@ -264,10 +266,9 @@ GitHub / Context7 connector 与 gh / ctx7 CLI 都是可选通道，不是所有�
 - 发现技能时可使用 gh skill search / preview，或 ctx7 skills search / suggest / list；先检查 CLI 版本与 --help。gh skill 当前为 Preview，不能假定每个安装版本都支持。
 - 官方技能优先从工具供应商/项目维护者的仓库读取；核对来源组织、维护状态、许可证、更新时间、SKILL.md、引用文件和脚本。搜索排名不是可信度证明。
 - 安装或运行第三方技能前先 preview 并审阅全部脚本与外部调用；没有用户明确要求时不自动安装、不执行未知脚本、不授予额外权限。
-- SKILL.md 按 Agent Skills 规范校验；详细检索流程、命令、源清单和安全门见 [ONLINE-RESEARCH-AND-SKILLS.md](references/ONLINE-RESEARCH-AND-SKILLS.md)。
+- 需要查当前库/API/CLI 文档、GitHub 资源或发现第三方 Agent Skill 时，先选当前可用的 connector/CLI，再核对版本和官方来源；第三方技能先 preview 并审阅脚本、权限与外部调用，不盲目安装或执行。检索步骤和安全门见 [ONLINE-RESEARCH-AND-SKILLS.md](references/ONLINE-RESEARCH-AND-SKILLS.md)。
 
 没有网络或权威来源不可达时，明确报告未完成在线核验；不得将模型记忆包装成当前官方文档。
-
 
 ## 9. 并行、管道与调用合并
 
@@ -296,7 +297,7 @@ GitHub / Context7 connector 与 gh / ctx7 CLI 都是可选通道，不是所有�
 - 同源 API 支持批量时优先批量；可通过 stdin/stdout 合并时优先管道。不要为了并发拆散本可一次完成的请求。
 - PTC 程序内筛选、裁剪和聚合中间结果，只返回决策需要的字段；把图像和 `additionalContexts` 等可能单独转发的内容也计入上下文预算。
 
-详细的端到端执行顺序、后台任务生命周期、渐进式上下文读取、缓存失效和失败恢复见 [EXECUTION-EFFICIENCY.md](references/EXECUTION-EFFICIENCY.md)。
+多阶段任务需要决定批量、并行、后台运行、委派或失败恢复时，先画依赖 DAG 和读写集合；批量优先于拆分并发，仅在独立、安全且节省的关键路径时间大于协调成本时并行。长任务管理、上下文裁剪和部分失败恢复见 [EXECUTION-EFFICIENCY.md](references/EXECUTION-EFFICIENCY.md)。
 
 ### 写入边界
 
@@ -318,8 +319,7 @@ GitHub / Context7 connector 与 gh / ctx7 CLI 都是可选通道，不是所有�
 - 只让明确标记为 concurrency-safe 的当前参数调用重叠执行；未知/异常一律按 exclusive 串行处理。写同一资源必须串行。
 - 处理部分失败时保留各分支结果；检查已发生副作用后再恢复，不能假设外层失败会回滚。
 - 中间结果留在程序内，筛选/流式处理后只返回决策必需字段；图像与 additionalContexts 等可能独立转发的 payload 也计入上下文预算。
-- 详细的 TypeScript/Python runtime 差异、调度、取消、输出限制和 Session 记录见 [PTC-EXECUTION.md](references/PTC-EXECUTION.md)；版本依据见 [AUTHORITATIVE-SOURCES.md](references/AUTHORITATIVE-SOURCES.md)。
-
+- 仅在当前会话确实启用 PTC、注入 `run_code` 与 `tools:sdk`，且多步编排/批量处理能减少往返或上下文时采用；单步任务直接调用原生工具。runtime 语言、SDK、调度、取消和部分失败语义见 [PTC-EXECUTION.md](references/PTC-EXECUTION.md)，版本依据见 [AUTHORITATIVE-SOURCES.md](references/AUTHORITATIVE-SOURCES.md)。
 
 ## 11. 计划与子智能体
 
@@ -432,21 +432,21 @@ REPORT:
 - 非幂等操作失败后盲目重试。
 - 未验证就报告成功。
 
-
 ## 15. CLI、编程规范与工程原则
 
 本技能负责选择工具和执行路径；实现细节按任务按需加载，避免把所有规则重复塞入主技能：
 
-| 任务 | 参考文档 |
-|---|---|
-| CLI 模板、Windows Git Bash、压缩文件和 diff | [CLI-TOOLS.md](references/CLI-TOOLS.md) |
-| 在线资料、Context7、GitHub CLI、Agent Skills 发现/验证 | [ONLINE-RESEARCH-AND-SKILLS.md](references/ONLINE-RESEARCH-AND-SKILLS.md) |
-| 编写/修改代码、API、错误处理、测试和性能优化 | [PROGRAMMING-RULES.md](references/PROGRAMMING-RULES.md) |
-| 绿地架构、官方调研、候选方案、ADR/C4 | [ARCHITECTURE-DESIGN.md](references/ARCHITECTURE-DESIGN.md) |
-| 工程定律、复杂性和性能取舍 | [ENGINEERING-PRINCIPLES.md](references/ENGINEERING-PRINCIPLES.md) |
-| DSH/FastCtx/ast-grep/codebase-memory 路由 | [REFERENCE.md](references/REFERENCE.md) |
-| PTC 执行细节 | [PTC-EXECUTION.md](references/PTC-EXECUTION.md) |
-| 上游仓库、CLI 手册与规范 | [AUTHORITATIVE-SOURCES.md](references/AUTHORITATIVE-SOURCES.md) |
+| 触发场景 | 决策层摘要：先判断什么、默认怎么选 | 深入参考 |
+|---|---|---|
+| 绿地项目、系统重建或重大架构重设计 | 先明确质量属性和硬约束，再做官方调研、候选比较与高风险原型；既有系统先理解现状，不因局部任务重选架构。 | [ARCHITECTURE-DESIGN.md](references/ARCHITECTURE-DESIGN.md) |
+| 工具、运行时、CLI/API 行为或参数不确定 | 先看当前版本、help 和 schema；按版本匹配上游手册/源码。Context7 用于定位，不作为最终行为证据。 | [AUTHORITATIVE-SOURCES.md](references/AUTHORITATIVE-SOURCES.md) |
+| 本地文件、终端命令和批处理 | 文件读写/搜索优先 FastCtx；过滤、转换、批量组合和管道再选 CLI，并核对可用性与输入输出语义。 | [CLI-TOOLS.md](references/CLI-TOOLS.md) |
+| 多阶段工具任务、并行、后台运行或委派 | 先画 DAG 和读写集合；优先批量，只有独立且收益超过协调成本时并行；长任务后台化并保留部分成功结果。 | [EXECUTION-EFFICIENCY.md](references/EXECUTION-EFFICIENCY.md) |
+| 当前文档检索、GitHub 操作或 Agent Skill 发现 | 按任务选 connector/CLI 和官方来源；确认版本、权限与数据边界；第三方技能先审阅来源、脚本和外部调用。 | [ONLINE-RESEARCH-AND-SKILLS.md](references/ONLINE-RESEARCH-AND-SKILLS.md) |
+| 功能实现、Bug 修复、重构和代码审查 | 先理解现有实现并明确契约/验收条件；外部边界校验、错误与资源处理明确；性能优化先定 workload、基线和热点。 | [PROGRAMMING-RULES.md](references/PROGRAMMING-RULES.md) |
+| 简单性、兼容性、抽象、可靠性或性能原则冲突 | 不按原则名称机械套用；先守硬约束，再按目标、调用方可观察行为、风险和测量证据权衡总成本。 | [ENGINEERING-PRINCIPLES.md](references/ENGINEERING-PRINCIPLES.md) |
+| 确认当前会话启用 PTC，且任务需要多步编排 | 多步依赖、批量扇出或程序内聚合有净收益时才用；runtime/SDK 以当前注入定义为准，单步调用不强制套 PTC。 | [PTC-EXECUTION.md](references/PTC-EXECUTION.md) |
+| 任务路由仍不明确，或首选工具不可用 | 查工具映射和降级路径；它是补充索引，不替代本技能六步流程，也不要求每次都读取。 | [REFERENCE.md](references/REFERENCE.md) |
 
 执行底线：正确性、安全、数据完整性和已有 API 契约是硬约束；先理解 workload、复杂度和理论下界，再用真实基准、profile、分配与峰值内存数据优化。大数据优先流式、分块和有界队列。绿地项目先调研当前官方文档、比较至少两个可行架构并记录 ADR；既有项目先检查现状和基线。工程原则是决策启发式，不是机械打勾项；细则只在当前任务需要时读取。
 
@@ -458,8 +458,7 @@ REPORT:
 - **性能与资源优化**：用 Pareto 和阿姆达尔定律指导优先级；基于端到端测量定位主要瓶颈，优先优化对总耗时、吞吐或峰值内存贡献最大的部分，不以局部指标改善冒充整体收益。
 - **错误处理与可靠性**：按信任边界区分防御性检查和 Fail Fast；验证外部输入及系统边界，不在可信内部层重复堆叠校验。保留错误上下文、确定性释放资源，并显式处理幂等性、并发和部分成功。
 
-遇到原则冲突时，以用户目标、质量属性、当前 workload、已有契约和可测证据作取舍；详细原则与冲突表见 [ENGINEERING-PRINCIPLES.md](references/ENGINEERING-PRINCIPLES.md)，代码层规则见 [PROGRAMMING-RULES.md](references/PROGRAMMING-RULES.md)。
-
+遇到原则冲突时，不按口号机械裁决：先守住正确性、安全、数据完整性和已有契约，再按用户目标、当前 workload、风险与可测证据选择总成本更低的方案。定律适用边界和常见冲突见 [ENGINEERING-PRINCIPLES.md](references/ENGINEERING-PRINCIPLES.md)；代码实现规则见 [PROGRAMMING-RULES.md](references/PROGRAMMING-RULES.md)。
 
 ## 16. 快速检查清单
 
