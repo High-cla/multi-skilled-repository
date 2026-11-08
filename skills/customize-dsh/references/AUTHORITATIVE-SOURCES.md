@@ -15,7 +15,11 @@
 ### 配置与启动
 
 - [配置目录（英文，生成文件）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/config-catalog.md) · [配置目录（中文，生成文件）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/config-catalog.zh.md) — 每个 package 可配置字段、类型、默认值、注入服务和声明源码。生成文件应由仓库脚本维护，不要手工修改。
-- [CLI 行为参考（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/apps/cli/reference/README.zh.md) — profile 初始化、bundle 层、参数边界、dump-config、配置 schema dump。
+- [CLI 行为参考（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/apps/cli/reference/README.zh.md) — profile 初始化、bundle 层、参数边界、dump-config、配置 schema dump；`--from-default-profile` 会替换目标 profile，操作前应备份。
+- [0.2.2-rc.1 发布说明](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.2-rc.1) — 当前预发布版的重要行为与迁移边界；不得当作用户已经安装的 stable 版本。
+- [Node 24 迁移指南](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/node-24/guide.zh.md) — 当前仓库 Node.js `>=24.9.0` 下限。
+- [条件工具迁移指南](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/conditional-tools/guide.zh.md) — `when` 条件、`toolSet`、`ctx.tools.resolve()` 与自定义执行器迁移。
+- [文件修改策略默认值迁移指南](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.2-alpha.2/fs-observation-policy-default-off/guide.zh.md) — `fs-observation-policy`、read-before-write 与 `apply_patch` 的默认变化。
 - [app-boot package README](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/boot/app-boot/README.md) — profile/bundle composition、HMR 模板差异、启动失败与兼容性门禁。
 - [CLI 行为参考（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/apps/cli/reference/README.zh.md) — 当前 profile boot、`--from-default-profile`、`--dump-config-schema`、插件管理和启动诊断语义。
 - [架构说明](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/architecture.md) — profile、bundle、patch 层的总体模型。
@@ -46,6 +50,7 @@
 - [Agent Teams 子系统（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/agent-team.zh.md) — `ctx.agentTeams` 服务、持久化 task DAG、根 Session 模式与 Web projection。
 - [Agent Team service package README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/team/agent-team/README.zh.md) — `defaultEnabled`、`maxTasks`、启用/恢复边界与限制。
 - [Agent Team tools package README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/team/tool-agent-team/README.zh.md) — `team_task_*` 工具、标准 subagent 依赖与可见性。
+- [Subagent control tools README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/subagent/tool-subagent-control/README.zh.md) — 当前 `send_message` inbox 交付、`wait_agent`、中断与寻址语义；Team 本身不拥有独立消息通道。
 
 ### Skills
 
@@ -71,7 +76,8 @@
 
 ### Plugin Market
 
-- [Plugin Market README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/boot/plugin-market/README.zh.md) — Discover 页面、`plugin_market` 工具、索引读取/缓存、安装状态与已知限制。
+- [Plugin Market README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/boot/plugin-market/README.zh.md) — Discover 页面、只读 `plugin_market` 工具、索引读取/缓存、安装状态与限制；其中 `update-available` 不是工具内升级操作。
+- [Plugin Manager README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/boot/plugin-manager/README.zh.md) — 第三方 bundle 的 `listVersions()` / `updateBundle()`、兼容性预检、HMR 更新与失败恢复。
 - [Plugin Market index validator](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/util/plugin-market-index/README.zh.md) — 索引格式校验；索引内容未签名，条目和版本信息仍属于来源方声明。
 - [Plugin Market tool catalog（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/tool-catalog.zh.md#deepseek-aidsh-plugin-market) — 模型可见工具参数与输出。
 
@@ -91,7 +97,7 @@
 - local filesystem skill provider 默认 `watch: true`；frontmatter/skill entry 变化触发 catalog refresh，而正文每次 load 重新读取。当前 frontmatter 还支持可选 `whenToUse` 与 `metadata`；provider 支持 symlink skill roots/文件，但仍只发现 root 的直接子项。资源子目录修改不等于 catalog refresh。
 - `dsh-tools` 不再接受旧执行 Config 的 `mode` 与 `maxParallelSubCalls`；native/PTC 由 `dsh-tool-executor-native` / `dsh-tool-executor-ptc` 明确选择。随附 profiles 继承 base 的 native executor，自定义 composition 必须挂载 executor；PTC 需要 `ctx.ptcRuntime`。旧 `dsh-agent-tool-presentation` 保留兼容但已弃用，`DSH_TOOLS_MODE` 不再驱动 web/headless/sdk。
 - Agent Teams 由 `dsh-agent-team` 服务包和 `dsh-tool-agent-team` 工具包构成；默认新 Session 关闭，`defaultEnabled` 默认 false，`maxTasks` 默认 256。Team 使用共享 checkout 和普通 subagent 树，不提供 worktree 隔离；`writeScopes` 仅是提示。
-- Plugin Market 客户端由上游提供，但市场索引未签名，插件描述/元数据是第三方输入；`update-available` 当前不提供原地升级，需卸载后安装新版本。
+- Plugin Market 客户端由上游提供，但市场索引未签名，插件描述/元数据是第三方输入；`plugin_market` 是只读发现工具，`update-available` 是索引状态而非升级动作。0.2.2-rc.1 的 Plugin Manager 另有面向符合条件第三方 bundle 的 `updateBundle()` 显式更新接口，支持精确版本兼容性检查、HMR 与失败后恢复尝试；无 HMR 时可能需要重启，恢复也可能失败。不可再把“必须卸载后安装”概括成所有更新流程。
 - MCP client 当前源码默认 `toolCallTimeoutMs = 60000`、`failOnStartupError = false`；`serverName` pattern 为 `[A-Za-z0-9_-]{1,32}`，唯一性按注册 scope 管理，agent scopes 可复用名称。以用户实际版本 config catalog 为准。
 - MCP 当前支持 `stdio` 与 `streamable-http`；不能虚构 `remote` transport。
 - Agent preset 存在不同概念/实现。确认用户指的是目录型 Agent preset 还是 `@deepseek-ai/dsh-agent-preset` 的 Cordis 子插件组合，再选择对应配置路径。
@@ -165,5 +171,12 @@ dsh --profile <name> --dump-config-schema
 
 ### 上游版本核验记录
 
-- 本次资料核验日期：2026-11-05。
+- 本次资料核验日期：2026-11-08。
 - 核验时 `deepseek-ai/deepseek-harness` `master` HEAD：[`fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159`](https://github.com/deepseek-ai/deepseek-harness/commit/fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159)，于 2026-11-04 08:40 UTC 合入。该快照中的 `apps/cli/package.json` 版本为 `0.2.2-rc.1`；这是源码中的 RC 版本标识，不应推断为用户安装版本或最终 stable npm 版本。此 SHA 仅用于复核本次文档快照；后续更新需重新读取官方 HEAD / tag，并按用户实际安装的版本核验。
+
+### 0.2.2-rc.1 关键行为补充
+
+- Node.js：当前上游 root 与 CLI `engines.node` 为 `>=24.9.0`，workspace 使用 pnpm `11.28.5`；这描述当前源码快照，不代表旧版安装应直接升级 package manager。
+- 文件修改：当前 base 组合禁用 `fs-observation-policy`，read-before-write / stale-file 防护不是默认强制门禁；`applyPatch` schema 默认 false。该 SHA 的 base patch 文件与 tool catalog 对 base preset 是否显式启用 `apply_patch` 存在冲突，应使用目标 profile 的 `--dump-config` 核对有效配置。
+- 工具执行器：`both` 混合呈现模式已移除，只能选 native 或 PTC；条件工具可用 `register(..., { when })`，程序化调用需解析并传递步骤级 `toolSet`。
+- 插件元数据：[Host plugin reference](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/preset/agent-preset/skills/cordis-plugin-development/references/host-plugin.md) 规定 package-root 与 subpath plugin 的导出差异；subpath 插件不会从 package.json 读取 name/description/icon。
