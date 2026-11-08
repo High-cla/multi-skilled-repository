@@ -6,6 +6,44 @@
 
 > **当前运行时下限**：0.2.2-rc.1 源码快照的 Node.js 要求为 `>=24.9.0`，root package 使用 pnpm `11.28.5`。这是当前上游预发布快照信息；用户应先读取自己安装版本的 CLI/package manifest。npm/source CLI 和显式 Node runtime SDK 要检查 Node；打包 Desktop 与自带可执行文件的 SDK 使用随包 runtime。参见 [Node 24 upgrade guide](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/node-24/guide.zh.md) 与 [0.2.2-rc.1 release notes](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.2-rc.1)。
 
+## 快速决策摘要：先选扩展形态，再走对应路线
+
+### 30 秒形态判断
+
+| 用户真正需要的结果 | 优先选择 | 不要误选 |
+|---|---|---|
+| 只增加说明、工作流、提示词或静态资源，不执行宿主代码 | DSH Skill | 不要为纯说明内容创建 Cordis 插件 |
+| 让 DSH 调用外部服务，且服务已有 MCP 接口 | 配置 `dsh-mcp-client` 接入 MCP server | MCP server 本身不是 DSH 插件，也不需要仅为接入它而创建 bundle |
+| 在 DSH Host 内增加服务、工具、命令、hook 或生命周期逻辑 | 纯 Cordis plugin | 单个功能单元不必自动升级成 bundle |
+| 同一个包要分发多条 entry、默认 patch 或 disabled rows | Bundle | `dsh.profile.bundles` 是消费方 profile 清单，不是 bundle 自身声明 |
+| 还要扩展 DSH Web UI、设置页或工具结果视图 | Node plugin + `dsh.client` browser half | 不要在浏览器代码中引用 Node API、秘密或 Host 私有运行时对象 |
+| 要决定某个应用由哪些 bundle 和 patch 组成 | Profile | Profile 是宿主组合，不是插件或 bundle |
+
+以上机制可以组合，但职责不要混淆：plugin 是功能单元，bundle 是分发配置层，profile 是消费方启动组合，skill 是按需加载的说明资源。
+
+### 从需求到阅读路线
+
+| 当前任务 | 本文优先章节 | 官方资料优先级 |
+|---|---|---|
+| 安装 / 启用现有插件，或判断插件为什么未加载 | §1、§4、§7、§8 | 先看目标版本 CLI reference 和插件包 README，再用 `--dump-config` 检查依赖与 entry |
+| 新增 Node 服务、hook、命令或普通工具 | §2、§3、§4 | First plugin tutorial；开发模型可调用工具时再读 Tool tutorial / adding-a-tool cookbook |
+| 将多条 entry 和默认配置打成可复用包 | §1、§5、§7、§8 | External plugin packaging and installation；核对 `dsh.bundle.patch` 与目标 profile 的 `dsh.profile.bundles` |
+| 增加 Web 设置页、slot 或工具结果视图 | §3、§6、§7、§8、§9 | Client Modules README / subsystem；核对 `exports["./client"]`、`dsh.client` 和真实 client bundle |
+| 配置 MCP server，而不是开发 Host 插件 | 不必通读本文；回到 MCP client 专项文档 | `dsh-mcp-client` README + 目标版本 config catalog |
+| 排查兼容性、安装构建、发布或更新失败 | §7、§8、§9 | 发布教程、`engines.dsh` / peer 约束、Plugin Manager README、安装日志与实际 tarball |
+
+### 实施前的四个决策门
+
+1. **版本门**：先记录实际 DSH / Node 版本和部署形态。RC 源码快照不是 stable 版本；未在目标版本核实的 API 不写入 manifest 或示例。
+2. **执行信任门**：插件在 Host / browser 上下文执行；Git `prepare` 和 pnpm `allowBuilds` 还会在安装期执行代码。先审查源码、依赖和 lockfile，优先固定 commit SHA，不要无差别授权构建脚本。
+3. **破坏性操作门**：profile 模板重置会替换整个 profile；Plugin Manager 更新可能需要重启，失败恢复也可能失败。操作前备份，并确认可接受的回滚路径。
+4. **完成验证门**：安装成功或 boot 成功都不代表功能正确。至少确认 manifest / 产物、目标 profile 的 `--dump-config`、隔离启动、真实功能 smoke test 和负向测试；对 README 声称支持的每个 DSH 版本分别验证。
+
+### 阅读策略
+
+先读上表对应章节和目标版本官方资料，不需要从头通读全部实现参考。只有当配置字段、生命周期、客户端模块边界、更新恢复或安全行为无法从目标版本文档确认时，才继续深入源码与测试。本文的当前上游快照用于提示迁移风险，不可替代用户实际安装版本的证据。
+
+---
 ## 1. 先分清五种装配单位
 
 DSH 中几个名字相似的对象不是同一层：
