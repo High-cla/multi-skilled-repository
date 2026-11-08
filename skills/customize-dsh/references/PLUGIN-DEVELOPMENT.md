@@ -2,7 +2,9 @@
 
 > 本文面向 **在 DeepSeek Harness（DSH）中开发、安装、验证和发布扩展的外部作者**。它是工作指南，不替代 DSH 某个具体版本的官方配置目录、类型定义或实现。DSH 仍处于快速演进阶段；每次开发都要先确认目标 DSH 版本，并按本文“权威资料”回查当前版本。
 
-> **上游核验快照（2026-11-05）**：本次核对的 `deepseek-ai/deepseek-harness` `master` HEAD 为 [`fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159`](https://github.com/deepseek-ai/deepseek-harness/commit/fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159)（2026-11-04 08:40 UTC 合入）；该快照的 `apps/cli/package.json` 为 `0.2.2-rc.1`。这是源码快照/预发布版本标识，不等于所有用户已安装版本，也不应直接当作 stable npm 版本；实际开发仍须以用户安装版本的 tag/commit、config catalog 和运行时测试为准。
+> **上游核验快照（2026-11-08）**：本次核对的 `deepseek-ai/deepseek-harness` `master` HEAD 为 [`fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159`](https://github.com/deepseek-ai/deepseek-harness/commit/fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159)（2026-11-04 08:40 UTC 合入）；该快照的 `apps/cli/package.json` 为 `0.2.2-rc.1`。这是源码快照/预发布版本标识，不等于所有用户已安装版本，也不应直接当作 stable npm 版本；实际开发仍须以用户安装版本的 tag/commit、config catalog 和运行时测试为准。
+
+> **当前运行时下限**：0.2.2-rc.1 源码快照的 Node.js 要求为 `>=24.9.0`，root package 使用 pnpm `11.28.5`。这是当前上游预发布快照信息；用户应先读取自己安装版本的 CLI/package manifest。npm/source CLI 和显式 Node runtime SDK 要检查 Node；打包 Desktop 与自带可执行文件的 SDK 使用随包 runtime。参见 [Node 24 upgrade guide](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/node-24/guide.zh.md) 与 [0.2.2-rc.1 release notes](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.2-rc.1)。
 
 ## 1. 先分清五种装配单位
 
@@ -18,6 +20,8 @@ DSH 中几个名字相似的对象不是同一层：
 
 **插件（plugin）是功能单位；bundle 是分发配置层；profile 是启动组合。** 不能把安装一个 npm 依赖、把它加入 bundle 层、把一条 Cordis entry 挂载成功当作同一个状态。
 
+**Profile 重置警告**：`dsh --profile <custom> --from-default-profile <template>` 会以随附模板的全新副本替换目标目录，包括删除原 profile 中已安装的依赖和用户 patch；执行前先备份 `$DSH_HOME/profiles/<custom>/`。替换失败/进程中断时，按 CLI 文档检查 `.staging-*/previous` 恢复目录。
+
 ### 插件形态选择
 
 | 用户实际需求 | 应采用的 DSH 机制 | 是否需要 bundle |
@@ -30,6 +34,14 @@ DSH 中几个名字相似的对象不是同一层：
 | 提供独立可启动应用/profile | Profile 是消费方组合；通常配合一个或多个 bundle | Profile 不等于 bundle |
 
 不要仅因一个仓库名包含 plugin 就假设它属于官方插件机制。当前核心开发契约以官方 Cordis 插件、bundle 与 client module 文档为准；第三方市场/索引格式、仓库专属清单（例如历史上出现过的 `.dsh-plugin`）不是 DSH 核心 package manifest 的替代品。Claude Code 的 `.claude-plugin/plugin.json` 也不是 DSH 清单。
+
+## 插件展示元数据与 subpath 导出（0.2.2-rc.1+）
+
+Plugin Manager / Settings 可从导出的 locale JSON 读取 `meta.title`、`meta.description`，并读取导出的 icon。package-root 插件建议导出 `./locale/*.json` 与 `./icon`，也可在 package.json 顶层声明相对路径 `icon`（其优先级高于 `./icon`）；应在 `files` 中包含 locale、icon、patch、runtime/client 产物，并对 packed tarball 检查实际文件列表。
+
+**Subpath 插件不是 package-root 插件**：例如 `my-plugins/search` 不会读取 package.json，也不继承包根的 name/description/icon；需导出 `./search/locale/*.json` 与 `./search/icon`。图标仅支持 SVG、PNG、JPEG、WebP，最大 256 KiB，必须留在包内；绝对路径、URL 与逃出包目录的 symlink 会被拒绝。升级到该版本时，不能再依赖 subpath 插件读取 package.json 元数据。完成后在英文与目标语言分别验证标题、描述、每行图标和诊断，不要仅凭安装成功宣称 UI 展示正常。
+
+官方规范与例子：[Host plugin metadata reference](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/preset/agent-preset/skills/cordis-plugin-development/references/host-plugin.md)。
 
 ## 2. 最小 Cordis 插件模块
 
@@ -128,7 +140,13 @@ schema 约束在加载时校验，缺少必填项或类型错误可能导致插�
 
 ### 工具执行器的版本边界（0.2.1-rc.2 及后续版本）
 
-`@deepseek-ai/dsh-tools` 继续负责工具注册，但新版本已移除其 `mode` 与 `maxParallelSubCalls` Config 字段。原生与 PTC 执行分别由 `@deepseek-ai/dsh-tool-executor-native`、`@deepseek-ai/dsh-tool-executor-ptc` 提供；随附 profile 继承 base 的 native executor，自定义 composition 必须在目标 scope 明确挂载一个 executor，同一 scope 不能同时启用两种 executor。PTC executor 需要已挂载的 `ctx.ptcRuntime`；`maxParallelSubCalls` 迁入 PTC executor 配置，`agent-loop.maxParallelToolCalls` 仍是独立批次并发设置。旧 `@deepseek-ai/dsh-agent-tool-presentation` 选择器暂时兼容但已弃用；`DSH_TOOLS_MODE` 不再控制 web/headless/sdk profile。迁移前先读[官方升级指南](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/tool-executor-plugins/guide.zh.md)，不要把旧版 `dsh-tools` Config 复制到新版。
+`@deepseek-ai/dsh-tools` 继续负责工具注册，但新版本已移除其 `mode` 与 `maxParallelSubCalls` Config 字段。原生与 PTC 执行分别由 `@deepseek-ai/dsh-tool-executor-native`、`@deepseek-ai/dsh-tool-executor-ptc` 提供；随附 profile 继承 base 的 native executor，自定义 composition 必须在目标 scope 明确挂载一个 executor，同一 scope 不能同时启用两种 executor。PTC executor 需要已挂载的 `ctx.ptcRuntime`；`maxParallelSubCalls` 迁入 PTC executor 配置，`agent-loop.maxParallelToolCalls` 仍是独立批次并发设置。旧 `@deepseek-ai/dsh-agent-tool-presentation` 选择器暂时兼容但已弃用；`DSH_TOOLS_MODE` 不再控制 web/headless/sdk profile。0.2.2-rc.1 还移除了 native/PTC 之外的 `both` 混合工具呈现模式。迁移前先读[官方升级指南](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/tool-executor-plugins/guide.zh.md)，不要把旧版 `dsh-tools` Config 复制到新版。
+
+### 按步骤条件启用工具（0.2.2-rc.1+）
+
+工具可以通过 `ctx.tools.register(definition, { when })` 按步骤条件注册。条件接收该步骤捕获的 `modelSelection`，并决定该步骤模型声明、工具执行器分区及批次可执行集合。不要再在 `system-prompt/assemble` listener 中自行过滤 `assembly.tools`，否则 prompt 声明与执行准入可能分离。
+
+程序化调用条件工具时，调用 `ctx.tools.resolve({ agent, modelSelection, signal })`，把返回的 `toolSet` 同时传入 `assemble()` 与 `ctx.tools.execute()` 批次，并在批次 settle 后 dispose；自定义、不使用共享 pipeline 的 executor 应调用 `ctx.tools.executable(name, agent, toolSet)`。迁移步骤与负向测试见 [conditional-tools upgrade guide](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/conditional-tools/guide.zh.md)。
 
 ## 4. 纯 Cordis 包：安装依赖 + profile 显式插入
 
@@ -247,11 +265,15 @@ manifest 示意（`exports` 中的根入口按包实际情况保留；下面只�
 - 确保 npm `files` 包含运行时入口、声明的 patch、client bundle、需要提供的资源和许可证；用 `pnpm pack` 检查实际 tarball，而不是只看本地目录。
 - README 要明确功能、所需 DSH/Node 版本、安装命令、配置字段、权限影响、已知限制、卸载/回滚方式和测试证据。
 
+### Plugin Manager 的更新与恢复
+
+0.2.2-rc.1 为符合条件的第三方 profile bundle 增加 `listVersions()` 与 `updateBundle(name, version)`。该路径先查询精确目标版本，再检查 bundle manifest、`engines.dsh` 与 DSH peer 兼容性；只允许更新到较新的版本。HMR 可用时先卸载旧版本再安装目标，若目标安装/激活失败会尝试移除目标并重新安装旧版本；若恢复也失败，包可能处于未安装状态。无 HMR 时可能直接覆盖磁盘版本并返回 `restart-required`。不能把 Plugin Market 的 `update-available` 状态等同于这套 API，也不能承诺所有安装包均可更新。详见 [Plugin Manager README](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/boot/plugin-manager/README.zh.md)；市场索引本身仍是第三方未签名来源。
+
 ### Git 安装与 prepare 风险
 
 官方发布指南明确：Git 安装得到的是源码；不会自动替作者执行任意 `build` 脚本。TypeScript 插件需要可用的构建产物时，应提供自包含的 `prepare` 构建步骤，或直接分发预构建 npm/tarball。
 
-pnpm 10 对 Git 依赖的构建脚本需要显式授权（通常通过 profile 内 pnpm 配置的 `allowBuilds` 项）。这不是无害开关：它允许依赖在安装阶段以当前用户权限执行代码，通常不处于 Agent 的沙箱内。处理原则：
+当前上游根 package 固定 pnpm `11.28.5`。pnpm 11 对 Git 依赖的构建脚本需要显式授权（通常通过 profile 内 pnpm 配置的 `allowBuilds` 项）。这不是无害开关：它允许依赖在安装阶段以当前用户权限执行代码，通常不处于 Agent 的沙箱内。处理原则：
 
 1. 先审查仓库脚本、依赖和 lockfile，确认来源可信。
 2. 优先锁定 Git commit SHA，而不是长期追踪会变化的 branch。
@@ -275,6 +297,10 @@ pnpm 10 对 Git 依赖的构建脚本需要显式授权（通常通过 profile �
 ## 9. 安全基线
 
 插件的代码在宿主进程内或浏览器上下文执行，Git prepare 还会在安装阶段执行；不能假设 DSH 沙箱自动覆盖插件作者代码。
+
+### 文件修改策略默认值
+
+0.2.2 版本线的随附 base 组合禁用 `@deepseek-ai/dsh-fs-observation-policy`（`disabled: true`）；read-before-write 与 stale-file 检查不再是默认修改门禁。沙箱与 Review 仍保留，但不等于写前校验。恢复策略需在有效组合中启用对应 entry。`tool-fs.applyPatch` schema 默认 false，实际工具是否存在取决于 profile/preset 覆盖。注意同一官方 HEAD 的 base patch YAML 将 `applyPatch: false`，而生成 tool catalog 和已实现说明称 base/standard 组合启用；遇到差异时以目标 profile 的 `dsh --dump-config` 和运行时工具清单为准，并在发布报告里记录不确定性。
 
 - 只请求实现功能所需的最少服务、文件和网络能力；不要为方便引入 unrestricted shell、任意目录读取或全局网络访问。
 - 任何 shell、文件、网络或外部服务输入都必须按威胁模型校验；拒绝路径穿越、命令注入、SSRF 和不可信 URL 跳转。
@@ -336,3 +362,12 @@ pnpm 10 对 Git 依赖的构建脚本需要显式授权（通常通过 profile �
 ---
 
 **维护规则：** 上游 master 可帮助发现新资料，但不能代表所有已发布版本。每次对本参考做实质更新，都应写入核验日期/DSH commit 或 tag，并将新发现的版本边界加入 evals；对不上目标安装版本时，应先停在诊断而不是生成猜测配置。
+
+## 10. 当前上游来源与版本边界补充
+
+- [DSH 0.2.2-rc.1 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.2-rc.1) — `both` 移除、Node 24.9、第三方包更新、文件修改策略默认值、条件工具和 subpath metadata 变化。
+- [Node 24 migration](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/node-24/guide.zh.md) — `>=24.9.0`。
+- [Conditional tools migration](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/conditional-tools/guide.zh.md) — 步骤级工具准入与 toolSet。
+- [Plugin Manager update API](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/boot/plugin-manager/README.zh.md) — 更新/恢复/重启边界。
+- [Host plugin metadata](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/preset/agent-preset/skills/cordis-plugin-development/references/host-plugin.md) — package-root/subpath 的 locale/icon 导出契约。
+- [Subagent control tools](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/subagent/tool-subagent-control/README.zh.md) — 当前 inbox 消息和等待语义。
