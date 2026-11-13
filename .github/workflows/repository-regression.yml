@@ -196,7 +196,61 @@ jobs:
               ids.append(case_id)
 
           assert len(ids) == len(set(ids)), "case IDs must be unique"
-          print(f"Validated {len(cases)} eval case definitions; this checks dataset structure, not model behavior.")
+          print(f"Validated {len(cases)} cli-first-decision eval case definitions.")
+
+          # customize-dsh uses its own declarative schema: skill_name + evals[].
+          customize_path = Path("skills/customize-dsh/evals/evals.json")
+          customize_data = json.loads(customize_path.read_text(encoding="utf-8"))
+          assert isinstance(customize_data, dict), "customize-dsh eval dataset must be an object"
+          assert customize_data.get("skill_name") == "customize-dsh", "unexpected customize-dsh skill_name"
+
+          customize_evals = customize_data.get("evals")
+          assert isinstance(customize_evals, list) and customize_evals, (
+              "customize-dsh evals must be a non-empty list"
+          )
+
+          customize_ids = []
+          customize_names = []
+          for index, evaluation in enumerate(customize_evals):
+              assert isinstance(evaluation, dict), f"customize-dsh eval {index} must be an object"
+
+              eval_id = evaluation.get("id")
+              assert isinstance(eval_id, int) and not isinstance(eval_id, bool) and eval_id > 0, (
+                  f"customize-dsh eval {index}: id must be a positive integer"
+              )
+
+              name = evaluation.get("name")
+              assert isinstance(name, str) and re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name), (
+                  f"customize-dsh eval {eval_id}: name must be a non-empty kebab-case identifier"
+              )
+
+              prompt = evaluation.get("prompt")
+              assert isinstance(prompt, str) and prompt.strip(), (
+                  f"customize-dsh eval {eval_id}: prompt must be non-empty"
+              )
+
+              assertions = evaluation.get("assertions")
+              assert isinstance(assertions, list) and assertions, (
+                  f"customize-dsh eval {eval_id}: assertions must be a non-empty list"
+              )
+              assert all(isinstance(item, str) and item.strip() for item in assertions), (
+                  f"customize-dsh eval {eval_id}: assertions must contain non-empty strings"
+              )
+
+              customize_ids.append(eval_id)
+              customize_names.append(name)
+
+          assert len(customize_ids) == len(set(customize_ids)), (
+              "customize-dsh eval IDs must be unique"
+          )
+          assert len(customize_names) == len(set(customize_names)), (
+              "customize-dsh eval names must be unique"
+          )
+
+          print(
+              f"Validated {len(customize_evals)} customize-dsh eval definitions; "
+              "these checks dataset structure, not model behavior."
+          )
           PY
 
   windows-shell-regression:
