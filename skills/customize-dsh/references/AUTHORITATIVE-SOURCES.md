@@ -93,6 +93,9 @@
 - [按 Session 选择 Team 模式迁移指南（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/session-team-mode/guide.zh.md) — 插件开关迁移到根 Session 选择、默认关闭、历史 Session 兼容及旧命令移除。
 ### Skills
 
+- [Agent Skills format specification](https://agentskills.io/specification) — 可移植的 SKILL.md frontmatter、目录结构、相对文件引用和渐进式披露要求；这是通用格式规范，不定义 DSH 私有 provider 扩展字段。
+- [Agent Skills specification source](https://github.com/agentskills/agentskills/blob/main/docs/specification.mdx) — 规范原文与 `skills-ref` 参考验证器。
+- [Anthropic skill-creator](https://github.com/anthropics/skills/tree/main/skills/skill-creator) — 技能创作、基线/with-skill 评测、触发描述优化的实现与方法参考；它是 Anthropic 的创作工具，不是 Agent Skills 格式规范。
 - [Skills 子系统（英文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/skills.md) — provider registry、scope layer、rank、重复名称裁决、discovery cache 和 invalidation。
 - [Filesystem skill provider README](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/skill/skill-filesystem/README.md) — 直接子项扫描、frontmatter、roots、watch 配置、正文按需重读。
 - [Skill registry README](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/skill/skill/README.md) — provider contract、scope-aware lookup 与完整定义加载。
