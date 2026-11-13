@@ -20,7 +20,7 @@
 | Skill | Description |
 |-------|-------------|
 | [`cmd-powershell-pitfalls`](./skills/cmd-powershell-pitfalls/SKILL.md) | CMD + PowerShell 混合脚本避坑指南 — 35 条规则与代码示例，涵盖代码页/编码、引号与变量展开、路径、退出码、UAC 最小权限和 MSYS2 参数转换。Use when writing or debugging `.cmd`/`.bat` scripts with embedded PowerShell. |
-| [`cli-first-decision`](./skills/cli-first-decision/SKILL.md) | CLI-First Decision 3.7 — DSH/FastCtx 优先路由、ast-grep、codebase-memory、DAG 并行，以及基于 run_code + 自动生成 tools:sdk 的 PTC runtime SDK 编排。GitHub/Context7 插件不是依赖。 |
+| [`cli-first-decision`](./skills/cli-first-decision/SKILL.md) | CLI-First Decision 3.10 — DSH/FastCtx 优先路由、ast-grep、codebase-memory、DAG 并行，以及基于 run_code + 自动生成 tools:sdk 的 PTC runtime SDK 编排。GitHub/Context7 插件不是依赖。 |
 | [`customize-dsh`](./skills/customize-dsh/SKILL.md) | DeepSeek Harness (DSH) 自定义修改指南 — settings.yaml、profiles/*/cordis.patch.yml 与 bundles、技能创作与修复、agent preset、MCP server (dsh-mcp-client)、cordis 插件、自定义工具、slash 命令、启动失败与 patch 报错诊断。Use when editing or creating DSH configs/extensions. |
 | [`game-item-spawner`](./skills/game-item-spawner/SKILL.md) | 游戏模组"网页点击生成物品"系统 — 逆向找生成API、提取物品目录(内嵌JSON)、模组内嵌本地HTTP服务器(localhost:PORT)、网页物品浏览器(分类/搜索/点击生成)、GitHub Pages托管+全链路验证。Use when user wants in-game item spawning with a visual web UI (spawn item, item browser, cheat generator). |
 
@@ -70,7 +70,7 @@
 | 长任务 | run_background + job_output |
 | MCP 退路 | 仅使用已 bake 的 mcp2cli |
 
-GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运行时真实注册时才可选用。从零开始先进行架构选型与网络官方文档调研，并明确速度/内存优先优化；并新增 DSH/FastCtx/CLI 上游权威文档索引与 Context7 文档检索流程；附带 [74 个评估用例](./skills/cli-first-decision/evals/evals.json)。
+GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运行时真实注册时才可选用。从零开始先进行架构选型与网络官方文档调研，并明确速度/内存优先优化；并新增 DSH/FastCtx/CLI 上游权威文档索引与 Context7 文档检索流程；附带 [85 个评估用例](./skills/cli-first-decision/evals/evals.json)。
 
 ➡️ [技能主体](./skills/cli-first-decision/SKILL.md) · [工具总参考](./skills/cli-first-decision/references/REFERENCE.md) · [CLI 工具链](./skills/cli-first-decision/references/CLI-TOOLS.md) · [权威文档索引](./skills/cli-first-decision/references/AUTHORITATIVE-SOURCES.md) · [架构设计与官方文档调研](./skills/cli-first-decision/references/ARCHITECTURE-DESIGN.md) · [编程规则](./skills/cli-first-decision/references/PROGRAMMING-RULES.md) · [工程原则](./skills/cli-first-decision/references/ENGINEERING-PRINCIPLES.md) · [评估用例](./skills/cli-first-decision/evals/evals.json)
 
@@ -86,7 +86,7 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
 | MCP | `@deepseek-ai/dsh-mcp-client`（stdio / streamable-http） |
 | 插件/工具/命令 | cordis 插件包、defineTool、`ctx.commands.register` |
 
-涵盖配置生效时机（HMR/热重载）、Profiles 层叠与 patch 语义（insert/disabled/整体替换）、反直觉陷阱（空/仅注释 patch 文件 throws 须用 `[]`）、区分当前 Cordis Agent preset 与已废弃的旧式目录 preset，以及逃生舱（`dev_fix_patch`/`dev_heal_links`/`dev_clear_routes`/`dev_uninject_plugin`）等。附带 `references/AUTHORITATIVE-SOURCES.md` 权威来源索引、Context7 检索流程和 `evals/evals.json`（16 个回归评估用例，包含 legacy settings 部分导入恢复与权限默认值路径）。
+涵盖配置生效时机（HMR/热重载）、Profiles 层叠与 patch 语义（insert/disabled/整体替换）、反直觉陷阱（空/仅注释 patch 文件 throws 须用 `[]`）、区分当前 Cordis Agent preset 与已废弃的旧式目录 preset，以及逃生舱（`dev_fix_patch`/`dev_heal_links`/`dev_clear_routes`/`dev_uninject_plugin`）等。现按 Agent Skills 通用规范与 DSH provider 扩展分层，并把配置细节移至按需加载的 `references/CONFIGURATION-REFERENCE.md`；技能创作/触发评测见 `references/SKILL-AUTHORING.md`，上游字段与版本核验见 `references/AUTHORITATIVE-SOURCES.md`。保留 `evals/evals.json`（37 个回归评估用例，包含 legacy settings 部分导入恢复与权限默认值路径）。
 
 ➡️ 完整内容: [`skills/customize-dsh/SKILL.md`](./skills/customize-dsh/SKILL.md)
 
