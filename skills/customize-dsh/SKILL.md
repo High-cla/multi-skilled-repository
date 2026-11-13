@@ -40,32 +40,32 @@ DSH 配置和扩展操作指南。**所有命令、字段、默认值和 API 均
 | 来源优先级、版本核验、官方字段/默认值和配置冲突 | [AUTHORITATIVE-SOURCES.md](references/AUTHORITATIVE-SOURCES.md) |
 | Cordis 插件、bundle、双端插件、自定义工具、发布、安装与验证 | [PLUGIN-DEVELOPMENT.md](references/PLUGIN-DEVELOPMENT.md) |
 
-## Skills（技能创作）
+## Skills（技能创作与修复）
 
-本地 filesystem skill provider 扫描技能根目录的**直接**条目：目录包 `<name>/SKILL.md` 或扁平文件 `<name>.md`（不会递归发现任意深度的 `**/SKILL.md`）。注意 `ctx.skills` 本身是 provider registry，也可由远程或内嵌 provider 提供技能；以下路径与发现规则仅描述随附的本地 filesystem provider。
+先区分**可移植 Agent Skills 格式**与 **DSH filesystem provider 扩展**：
+
+- **可移植格式**：目录包 `<skill-name>/SKILL.md`；frontmatter 必须有 `name`、`description`，`name` 与目录名一致。可选字段及长度/字符约束见 [Agent Skills 规范](https://agentskills.io/specification)。
+- **DSH provider 扩展**：本地 filesystem provider 还可能支持 `whenToUse`、`disable-model-invocation`、`user-invocable` 等字段；它们不是通用规范字段。只有确认目标 DSH 版本 schema 接受时才使用，不能把它们写进面向其他 Agent 的可移植技能模板。
+- **本地发现范围**：DSH 的 filesystem provider 扫描每个已配置 root 的直接条目，可识别目录包 `<name>/SKILL.md` 与扁平文件 `<name>.md`；不递归扫描任意深度。扁平文件是 provider 扩展，跨客户端分发优先使用目录包。
+- **frontmatter 最小模板**：
 
 ```markdown
 ---
 name: my-skill
-description: 一句话说明功能与触发条件。前置用户可能说的关键词或文件名。
-disable-model-invocation: false   # 可选，true 则模型目录不显示
-user-invocable: true              # 可选，默认 true
-whenToUse: "可选：补充模型判断何时应选择此技能的提示"
-metadata: {}                      # 可选：技能元数据
+description: Use when the user needs [specific task]. It [specific capability].
+license: MIT
 ---
 
 # My Skill
 
-（正文：说明、示例、参考）
+[Instructions, examples, and validation steps.]
 ```
 
-），与目录名一致
-- `description` 必填：无效或缺失的 description 会使该 skill 被跳过。模型目录展示摘要而非完整正文；description 长度上限和解析规则以当前 skill-filesystem 配置/源码为准，不要依赖硬编码的 500 字符常量。
-- `whenToUse`、`metadata` 是当前 filesystem provider 支持的可选 frontmatter 字段；`disable-model-invocation` 与 `user-invocable` 必须使用可解析的布尔值（或 provider 明确接受的布尔字符串），非法值可能使整个技能被跳过。
-- 当前 provider 可识别 symlink 目录包与扁平文件；仍只在每个技能根目录的直接子项中查找 `<name>/SKILL.md` 或 `<name>.md`，不会递归遍历任意深度。
-- 重名裁决：rank 低者赢，再按提供方顺序、本地顺序；最近 scope 层条目直接压过全局层
-- `skill` 工具加载后返回 `<skill_content>`、`<skill_resources>`、`<skill_instructions>`；资源（scripts/references/assets）按需解析，不枚举目录
-- 本环境技能库在 `~/.agents/skills/`（user-agents 层），与 `customize-opencode`、`skill-creator` 等并列
+- **编辑流程**：先明确任务边界、触发条件、输入/输出和成功标准；修改已有技能前保存原版并用代表性任务建立 baseline。用真实正向任务与相邻负向场景评测，修改后重跑同一组场景；根据输出质量、规则遵循、误触发和漏触发迭代。
+- **描述字段**：写清技能做什么、何时使用和不适用边界；把触发信息放在 description，而不是只写在正文。按通用规范不得超过 1024 字符。避免堆砌触发词或将相邻领域都纳入。
+- **验证**：先运行 `skills-ref validate <skill-directory>` 检查通用格式，再按目标 DSH 版本确认 provider 能发现并正确加载技能及引用资源。格式验证通过不代表触发效果或任务输出已验证。
+
+详细步骤、DSH 扩展字段清单和触发评测方法见 [SKILL-AUTHORING.md](references/SKILL-AUTHORING.md)。
 
 ## Agent presets
 
