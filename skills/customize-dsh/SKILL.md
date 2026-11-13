@@ -7,9 +7,9 @@ description: 仅当用户要编辑或创建 DeepSeek Harness（DSH）自身配�
 
 DSH 是"万物皆可插件"的宿主：配置严格校验，格式错误会导致启动失败（fail loud）。以下是常用定制面，但这是**摘要，非权威来源**。
 
-## 当前版本边界：0.2.2-rc.1（预发布）
+## 当前版本边界：0.2.2-rc.2（预发布）
 
-截至 2026-11-08，核验的官方 `master` HEAD 为 [fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159](https://github.com/deepseek-ai/deepseek-harness/commit/fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159)，源码版本为 `0.2.2-rc.1`；这是 RC 预发布快照，不代表用户安装的 stable 版本。该快照要求 Node.js `>=24.9.0`；npm/source CLI 和显式 Node runtime SDK 需要核对运行时，打包 Desktop 与自带可执行文件的 SDK 使用随包运行时。升级前按 [Node 24 迁移说明](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/node-24/guide.zh.md)核对。
+截至 2026-11-13，核验的官方 `master` HEAD 为 [e8f7b93a344964de3dca1ace9e72b6e4d6de87cb](https://github.com/deepseek-ai/deepseek-harness/commit/e8f7b93a344964de3dca1ace9e72b6e4d6de87cb)，CLI 源码版本为 `0.2.2-rc.2`；官方 [v0.2.2-rc.2 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.2-rc.2) 标记为 Pre-release，不是 stable，也不代表用户安装版本。该快照要求 Node.js `>=24.9.0`；npm/source CLI 和显式 Node runtime SDK 需要核对运行时，打包 Desktop 与自带可执行文件的 SDK 使用随包运行时。升级前按 [Node 24 迁移说明](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/node-24/guide.zh.md)核对。
 
 0.2.2-rc.1 及后续上游快照的关键边界：
 
@@ -19,7 +19,7 @@ DSH 是"万物皆可插件"的宿主：配置严格校验，格式错误会导�
 - Agent Team 通过标准 subagent `send_message` 向目标 inbox 发消息；成功表示目标 inbox 接受，不代表已回复。任务板变化本身不会唤醒空闲 Agent，也不会结束 `wait_agent`。
 - 工具可按步骤条件启用。扩展工具注册/执行器的插件迁移时，必须对照 `when`、`ctx.tools.resolve()`、`toolSet` 与条件集合传递规则，不能只在 prompt 中过滤工具。
 
-发布说明：[DSH 0.2.2-rc.1](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.2-rc.1)。
+发布说明：[DSH 0.2.2-rc.2](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.2-rc.2)（Pre-release）。
 
 ## 权威参考
 
