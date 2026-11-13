@@ -136,7 +136,10 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
     │   │   ├── AUTHORITATIVE-SOURCES.md
     │   │   ├── ARCHITECTURE-DESIGN.md
     │   │   ├── PROGRAMMING-RULES.md
-    │   │   └── ENGINEERING-PRINCIPLES.md
+    │   │   ├── ENGINEERING-PRINCIPLES.md
+    │   │   ├── EXECUTION-EFFICIENCY.md
+    │   │   ├── ONLINE-RESEARCH-AND-SKILLS.md
+    │   │   └── PTC-EXECUTION.md
     │   └── evals/
     │       └── evals.json
     ├── customize-dsh/
