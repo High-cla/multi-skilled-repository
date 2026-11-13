@@ -227,3 +227,9 @@ dsh --profile <name> --dump-config-schema
 - **Git Worktree / GitHub review**：0.2.2-rc.2 release notes 确认新增按 branch/commit/file type 审阅、GitHub review、同步已审阅进度和更新分支；该条仅记录 release notes 可确认的能力，不推断命令、权限或隔离语义。Team 自身仍共享 checkout，不因 Worktree 功能而获得自动隔离。
 - Node.js：本次 master CLI manifest 仍要求 >=24.9.0；此要求仅代表该源码快照。
 - 文件修改、工具执行器、条件工具、Plugin Manager 与 subpath metadata 的 0.2.2-rc.1 既有结论继续适用；本次没有证据表明应扩大或改写其版本边界。
+
+
+## Agent Skills 通用格式与创作方法
+
+- [Agent Skills specification](https://agentskills.io/specification) · [规范源码](https://github.com/agentskills/agentskills/blob/main/docs/specification.mdx) — 通用技能目录结构、必需 frontmatter 字段、可选字段、相对资源引用与渐进式披露的规范依据。格式判断以该规范为准。
+- [Anthropic skill-creator](https://github.com/anthropics/skills/tree/main/skills/skill-creator) · [SKILL.md](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md) — Anthropic 提供的技能创作、baseline 对照、任务评测和 description 触发评测方法参考。它是创作方法/实现示例，不是 Agent Skills 通用格式规范；其中依赖 Claude 环境的脚本、CLI、subagent 或 viewer 不自动构成 DSH 要求。
