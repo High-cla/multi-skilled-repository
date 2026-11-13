@@ -86,9 +86,9 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
 | MCP | `@deepseek-ai/dsh-mcp-client`（stdio / streamable-http） |
 | 插件/工具/命令 | cordis 插件包、defineTool、`ctx.commands.register` |
 
-涵盖配置生效时机（HMR/热重载）、Profiles 层叠与 patch 语义（insert/disabled/整体替换）、反直觉陷阱（空/仅注释 patch 文件 throws 须用 `[]`）、区分当前 Cordis Agent preset 与已废弃的旧式目录 preset，以及逃生舱（`dev_fix_patch`/`dev_heal_links`/`dev_clear_routes`/`dev_uninject_plugin`）等。现按 Agent Skills 通用规范与 DSH provider 扩展分层，并把配置细节移至按需加载的 `references/CONFIGURATION-REFERENCE.md`；技能创作/触发评测见 `references/SKILL-AUTHORING.md`，上游字段与版本核验见 `references/AUTHORITATIVE-SOURCES.md`。保留 `evals/evals.json`（37 个回归评估用例，包含 legacy settings 部分导入恢复与权限默认值路径）。
+涵盖配置生效时机（HMR/热重载）、Profiles 层叠与 patch 语义（insert/disabled/整体替换）、反直觉陷阱（空/仅注释 patch 文件 throws 须用 `[]`）、区分当前 Cordis Agent preset 与已废弃的旧式目录 preset，以及逃生舱（`dev_fix_patch`/`dev_heal_links`/`dev_clear_routes`/`dev_uninject_plugin`）等。现已区分 Agent Skills 通用 frontmatter 与 DSH filesystem provider 私有扩展，并补充 Agent Skills 规范及 Anthropic skill-creator 的来源边界。附带 `references/AUTHORITATIVE-SOURCES.md` 权威来源索引、Context7 检索流程和 `evals/evals.json`（37 个回归评估用例，包含 legacy settings 部分导入恢复与权限默认值路径）。
 
-➡️ [技能主体](./skills/customize-dsh/SKILL.md) · [配置参考](./skills/customize-dsh/references/CONFIGURATION-REFERENCE.md) · [插件开发](./skills/customize-dsh/references/PLUGIN-DEVELOPMENT.md) · [技能格式与创作评测](./skills/customize-dsh/references/SKILL-AUTHORING.md) · [权威来源](./skills/customize-dsh/references/AUTHORITATIVE-SOURCES.md)
+➡️ [技能主体](./skills/customize-dsh/SKILL.md) · [插件开发](./skills/customize-dsh/references/PLUGIN-DEVELOPMENT.md) · [权威来源](./skills/customize-dsh/references/AUTHORITATIVE-SOURCES.md)
 
 ### game-item-spawner
 
@@ -136,19 +136,13 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
     │   │   ├── AUTHORITATIVE-SOURCES.md
     │   │   ├── ARCHITECTURE-DESIGN.md
     │   │   ├── PROGRAMMING-RULES.md
-    │   │   ├── ENGINEERING-PRINCIPLES.md
-    │   │   ├── EXECUTION-EFFICIENCY.md
-    │   │   ├── ONLINE-RESEARCH-AND-SKILLS.md
-    │   │   └── PTC-EXECUTION.md
+    │   │   └── ENGINEERING-PRINCIPLES.md
     │   └── evals/
     │       └── evals.json
     ├── customize-dsh/
     │   ├── SKILL.md
     │   ├── references/
-    │   │   ├── AUTHORITATIVE-SOURCES.md
-    │   │   ├── CONFIGURATION-REFERENCE.md
-    │   │   ├── PLUGIN-DEVELOPMENT.md
-    │   │   └── SKILL-AUTHORING.md
+    │   │   └── AUTHORITATIVE-SOURCES.md
     │   └── evals/
     │       └── evals.json
     └── game-item-spawner/
