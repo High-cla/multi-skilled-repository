@@ -1,6 +1,6 @@
 {
   "skill": "cli-first-decision",
-  "version": "3.9",
+  "version": "3.10",
   "description": "Regression cases for CLI/MCP routing, official GitHub and Context7 docs/skills discovery, Agent Skills validation, safe remote writes, DSH PTC contracts, bounded concurrency, background jobs, context budgeting, FastCtx behavior, and recovery.",
   "cases": [
     {
@@ -783,6 +783,17 @@
         "Move detailed workflows into one-level references and link them from the main skill",
         "Use skills-ref validate and, when available, gh skill publish --dry-run without treating the Preview command as a stable requirement",
         "Keep source links, version boundaries, and unverified assumptions explicit"
+      ]
+    },
+    {
+      "id": "E85",
+      "input": "Add a new exported API symbol or type and write its test before implementing the behavior; the missing symbol currently prevents the test from compiling or importing.",
+      "expected": [
+        "Accept a compiler/import diagnostic caused solely by the not-yet-added target export as valid compile-time RED and record the exact diagnostic",
+        "Add only the minimal exported declaration/type/signature or an explicit failing stub needed to compile the test; do not implement the target behavior as scaffolding",
+        "Re-run the test and require a behavior assertion to fail because the target behavior is absent, or use compile-time assertions for a type/API-only contract",
+        "Implement the minimum behavior and re-run the same tests to GREEN",
+        "Do not accept unrelated syntax, dependency, environment, or compiler errors as valid RED"
       ]
     }
   ]
