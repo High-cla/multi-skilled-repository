@@ -131,18 +131,22 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
     ├── cli-first-decision/
     │   ├── SKILL.md
     │   ├── references/
-    │   │   ├── REFERENCE.md
-    │   │   ├── CLI-TOOLS.md
-    │   │   ├── AUTHORITATIVE-SOURCES.md
     │   │   ├── ARCHITECTURE-DESIGN.md
+    │   │   ├── AUTHORITATIVE-SOURCES.md
+    │   │   ├── CLI-TOOLS.md
+    │   │   ├── ENGINEERING-PRINCIPLES.md
+    │   │   ├── EXECUTION-EFFICIENCY.md
+    │   │   ├── ONLINE-RESEARCH-AND-SKILLS.md
     │   │   ├── PROGRAMMING-RULES.md
-    │   │   └── ENGINEERING-PRINCIPLES.md
+    │   │   ├── PTC-EXECUTION.md
+    │   │   └── REFERENCE.md
     │   └── evals/
     │       └── evals.json
     ├── customize-dsh/
     │   ├── SKILL.md
     │   ├── references/
-    │   │   └── AUTHORITATIVE-SOURCES.md
+    │   │   ├── AUTHORITATIVE-SOURCES.md
+    │   │   └── PLUGIN-DEVELOPMENT.md
     │   └── evals/
     │       └── evals.json
     └── game-item-spawner/
