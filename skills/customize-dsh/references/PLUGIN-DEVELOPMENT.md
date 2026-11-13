@@ -403,9 +403,14 @@ manifest 示意（`exports` 中的根入口按包实际情况保留；下面只�
 
 ## 10. 当前上游来源与版本边界补充
 
-- [DSH 0.2.2-rc.1 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.2-rc.1) — `both` 移除、Node 24.9、第三方包更新、文件修改策略默认值、条件工具和 subpath metadata 变化。
-- [Node 24 migration](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/node-24/guide.zh.md) — `>=24.9.0`。
+- [DSH 0.2.2-rc.2 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.2-rc.2) — Pre-release；包含具名/多层 SubAgent、Git Worktree/GitHub review 与分支同步等更新。不要当作 stable。
+- [Agent Team → subagent migration](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/agent-team-subagents/guide.zh.md) — Team 专属创建/消息/中断/等待 API 和配置键的移除及迁移。
+- [Session Team mode migration](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/session-team-mode/guide.zh.md) — 新 Session 默认关闭、根 Session 保存模式、历史 Session 行为与旧命令迁移。
+- [Agent Teams subsystem](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/agent-team.zh.md) — 当前 ctx.agentTeams API 与持久 agentTeam projection。
+- [Subagent subsystem](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/subagent.zh.md) — 命名/嵌套子代理树、Activation、身份和通信生命周期。
+- [Agent Team service package](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/team/agent-team/README.zh.md) — defaultEnabled / maxTasks 配置和任务板约束。
+- [Subagent control tools](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/subagent/tool-subagent-control/README.zh.md) — 当前 send_message、list_agents、interrupt_agent、wait_agent 语义。
+- [Node 24 migration](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/node-24/guide.zh.md) — >=24.9.0。
 - [Conditional tools migration](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/conditional-tools/guide.zh.md) — 步骤级工具准入与 toolSet。
 - [Plugin Manager update API](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/boot/plugin-manager/README.zh.md) — 更新/恢复/重启边界。
 - [Host plugin metadata](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/preset/agent-preset/skills/cordis-plugin-development/references/host-plugin.md) — package-root/subpath 的 locale/icon 导出契约。
-- [Subagent control tools](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/subagent/tool-subagent-control/README.zh.md) — 当前 inbox 消息和等待语义。
