@@ -88,7 +88,7 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
 
 涵盖配置生效时机（HMR/热重载）、Profiles 层叠与 patch 语义（insert/disabled/整体替换）、反直觉陷阱（空/仅注释 patch 文件 throws 须用 `[]`）、区分当前 Cordis Agent preset 与已废弃的旧式目录 preset，以及逃生舱（`dev_fix_patch`/`dev_heal_links`/`dev_clear_routes`/`dev_uninject_plugin`）等。现按 Agent Skills 通用规范与 DSH provider 扩展分层，并把配置细节移至按需加载的 `references/CONFIGURATION-REFERENCE.md`；技能创作/触发评测见 `references/SKILL-AUTHORING.md`，上游字段与版本核验见 `references/AUTHORITATIVE-SOURCES.md`。保留 `evals/evals.json`（37 个回归评估用例，包含 legacy settings 部分导入恢复与权限默认值路径）。
 
-➡️ 完整内容: [`skills/customize-dsh/SKILL.md`](./skills/customize-dsh/SKILL.md)
+➡️ [技能主体](./skills/customize-dsh/SKILL.md) · [配置参考](./skills/customize-dsh/references/CONFIGURATION-REFERENCE.md) · [插件开发](./skills/customize-dsh/references/PLUGIN-DEVELOPMENT.md) · [技能格式与创作评测](./skills/customize-dsh/references/SKILL-AUTHORING.md) · [权威来源](./skills/customize-dsh/references/AUTHORITATIVE-SOURCES.md)
 
 ### game-item-spawner
 
@@ -142,7 +142,10 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
     ├── customize-dsh/
     │   ├── SKILL.md
     │   ├── references/
-    │   │   └── AUTHORITATIVE-SOURCES.md
+    │   │   ├── AUTHORITATIVE-SOURCES.md
+    │   │   ├── CONFIGURATION-REFERENCE.md
+    │   │   ├── PLUGIN-DEVELOPMENT.md
+    │   │   └── SKILL-AUTHORING.md
     │   └── evals/
     │       └── evals.json
     └── game-item-spawner/
