@@ -367,6 +367,42 @@
         "旧 dsh-agent-tool-presentation 兼容但已弃用",
         "不要把旧 mode 字段写回 dsh-tools Config"
       ]
+    },
+    {
+      "id": 35,
+      "name": "agent-team-subagent-runtime-migration",
+      "prompt": "我从旧版 DSH Team API 升级到 0.2.2-rc.2，代码还在用 spawn_teammate、Team 专属 send_message/list_agents/interrupt_agent 和 ctx.agentTeams.spawnTeammate。应该怎么迁移？",
+      "assertions": [
+        "说明 Team 专属成员创建/消息/发现/中断 API 已移除，Team 只保留任务板和 Session 模式",
+        "创建新上下文成员用 subagent，继承历史用 subagent_fork",
+        "成员发现、通信、中断和等待交给标准 subagent-control 工具",
+        "ctx.agentTeams 不再提供创建、通信、中断、名册和等待 API，只提供 Team mode 与 task CRUD",
+        "指出历史 Team roster/mailbox 记录可解码但不再授予权限或重新投递"
+      ]
+    },
+    {
+      "id": 36,
+      "name": "agent-team-session-mode-default-and-migration",
+      "prompt": "DSH 0.2.2-rc.2 的 Agent Team 为什么新会话默认关闭？设置 defaultEnabled true 会不会覆盖已有会话？",
+      "assertions": [
+        "说明新 Session（包括普通 fork）默认关闭 Team，根 Session 选择控制整棵 subagent 树",
+        "defaultEnabled 默认 false；true 只初始化没有保存选择的新根 Session",
+        "恢复 Session 保留已保存选择，默认值不覆盖已有选择",
+        "关闭 Team 隐藏后续步骤中的 Team 工具和指导，但保留任务和子代理",
+        "指出旧 /team on/off 命令及插件页开关迁移到根 Session 模型/推理菜单"
+      ]
+    },
+    {
+      "id": 37,
+      "name": "agent-team-projection-and-worktree-boundary",
+      "prompt": "0.2.2-rc.2 的 Agent Team Web 面板和 Git Worktree 是否意味着队友已经有独立工作目录和自动合并？",
+      "assertions": [
+        "说明 agentTeam Session projection 发布持久 roster/task 视图，实时运行状态由 Session 状态叠加",
+        "持久化记录失败时 projection failure 暴露并保留最后有效视图",
+        "Agent Team 成员仍共享同一 checkout，writeScopes 仅提示不是锁或隔离",
+        "Git Worktree 的 branch/commit/file review、GitHub review 和分支同步是单独功能，不能推断 Team 自动分配 worktree 或自动 merge",
+        "对具体 Worktree 命令/API要求查 0.2.2-rc.2 对应官方 feature 文档，不猜测"
+      ]
     }
   ]
 }

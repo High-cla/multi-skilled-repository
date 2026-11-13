@@ -83,13 +83,14 @@
 - [旧 tool presentation selector README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/core/agent-tool-presentation/README.zh.md) — 兼容但已弃用；新配置应直接挂载 native 或 PTC executor。
 - [tool executor generated config catalog](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/config-catalog.zh.md#deepseek-aidsh-tool-executor-ptc) — 当前字段声明和默认值；与旧版安装时需按版本对照。
 
-### Agent Teams
-
-- [Agent Teams 子系统（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/agent-team.zh.md) — `ctx.agentTeams` 服务、持久化 task DAG、根 Session 模式与 Web projection。
-- [Agent Team service package README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/team/agent-team/README.zh.md) — `defaultEnabled`、`maxTasks`、启用/恢复边界与限制。
-- [Agent Team tools package README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/team/tool-agent-team/README.zh.md) — `team_task_*` 工具、标准 subagent 依赖与可见性。
-- [Subagent control tools README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/subagent/tool-subagent-control/README.zh.md) — 当前 `send_message` inbox 交付、`wait_agent`、中断与寻址语义；Team 本身不拥有独立消息通道。
-
+### Agent Teams / Subagent
+- [Agent Teams 子系统（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/agent-team.zh.md) — 当前 ctx.agentTeams 服务 API、任务 DAG、根 Session 模式和 agentTeam Web projection；明确 Team 不再是成员/消息运行时。
+- [Agent Team service package README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/team/agent-team/README.zh.md) — defaultEnabled、maxTasks、按 Session 启用/恢复边界、CAS 任务和共享 checkout 限制。
+- [Agent Team tools package README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/team/tool-agent-team/README.zh.md) — 四个 team_task_* 工具、标准 subagent 依赖与条件可见性。
+- [Subagent 子系统（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/subagent.zh.md) — 可继续子级、嵌套树、name/Session identity、Activation、消息投递和生命周期。
+- [Subagent control tools README（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/subagent/tool-subagent-control/README.zh.md) — 当前 send_message、list_agents、interrupt_agent、wait_agent 参数/行为；成功发送只确认 inbox 接受。
+- [Agent Team → subagent 迁移指南（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/agent-team-subagents/guide.zh.md) — 移除的 Team 专属工具、服务方法、配置键及迁移方向；对照当前 package README 核验参数细节。
+- [按 Session 选择 Team 模式迁移指南（中文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/session-team-mode/guide.zh.md) — 插件开关迁移到根 Session 选择、默认关闭、历史 Session 兼容及旧命令移除。
 ### Skills
 
 - [Skills 子系统（英文）](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/skills.md) — provider registry、scope layer、rank、重复名称裁决、discovery cache 和 invalidation。
@@ -209,12 +210,17 @@ dsh --profile <name> --dump-config-schema
 
 ### 上游版本核验记录
 
-- 本次资料核验日期：2026-11-08。
-- 核验时 `deepseek-ai/deepseek-harness` `master` HEAD：[`fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159`](https://github.com/deepseek-ai/deepseek-harness/commit/fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159)，于 2026-11-04 08:40 UTC 合入。该快照中的 `apps/cli/package.json` 版本为 `0.2.2-rc.1`；这是源码中的 RC 版本标识，不应推断为用户安装版本或最终 stable npm 版本。此 SHA 仅用于复核本次文档快照；后续更新需重新读取官方 HEAD / tag，并按用户实际安装的版本核验。
+- 本次资料核验日期：2026-11-13。
+- deepseek-ai/deepseek-harness 官方 master HEAD：[e8f7b93a344964de3dca1ace9e72b6e4d6de87cb](https://github.com/deepseek-ai/deepseek-harness/commit/e8f7b93a344964de3dca1ace9e72b6e4d6de87cb)，2026-11-11 合入 0.2.2-rc.2 发布分支。该快照 apps/cli/package.json 的源码版本为 0.2.2-rc.2，Node 要求仍为 >=24.9.0。官方 [v0.2.2-rc.2 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.2-rc.2) 标记为 **Pre-release**；这不是 stable 发行版，也不代表用户当前安装版本。
+- 本次确认的重要上游变化：Team 复用标准 subagent 树；移除 Team 专属 spawn/message/list/interrupt 与旧配置键；Team 模式按根 Session 保存；Web Team 面板改读 agentTeam Session projection。0.2.2-rc.2 release notes 另列 Git Worktree 的分支/提交/文件审阅及 GitHub review、分支同步能力，以及 SubAgent 具名/多层协作。涉及 Worktree 的具体操作 API 尚未在本次技能中展开，使用前须查该 RC 对应 CLI / feature 文档。
+- master 用于发现上游变化；对旧安装仍须读取实际 dsh --version、目标 tag / commit 和 profile。RC 源码版本不得写成 stable，也不得将 master 默认值无条件套用到旧版本。
 
-### 0.2.2-rc.1 关键行为补充
+### 0.2.2-rc.2 关键行为补充
 
-- Node.js：当前上游 root 与 CLI `engines.node` 为 `>=24.9.0`，workspace 使用 pnpm `11.28.5`；这描述当前源码快照，不代表旧版安装应直接升级 package manager。
-- 文件修改：当前 base 组合禁用 `fs-observation-policy`，read-before-write / stale-file 防护不是默认强制门禁；`applyPatch` schema 默认 false。该 SHA 的 base patch 文件与 tool catalog 对 base preset 是否显式启用 `apply_patch` 存在冲突，应使用目标 profile 的 `--dump-config` 核对有效配置。
-- 工具执行器：`both` 混合呈现模式已移除，只能选 native 或 PTC；条件工具可用 `register(..., { when })`，程序化调用需解析并传递步骤级 `toolSet`。
-- 插件元数据：[Host plugin reference](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/preset/agent-preset/skills/cordis-plugin-development/references/host-plugin.md) 规定 package-root 与 subpath plugin 的导出差异；subpath 插件不会从 package.json 读取 name/description/icon。
+- **Agent Teams / Subagent**：Team 仅保留共享任务板与根 Session 模式。标准 subagent runtime 负责创建、发现、消息、中断和生命周期；详见 SKILL.md 的 Team 小节及上述迁移指南。agent-team 拒绝 maxMembers、maxMessageBytes、disposalTimeoutMs；tool-agent-team 拒绝 interrupt、freshProvider、forkProvider。maxTasks 默认 256，defaultEnabled 默认 false。旧 Team 专属 API 不得用于新代码。
+- **按 Session 启用**：新 Session（包括普通 fork）默认关闭 Team；根 Session 的模式选择控制整棵树并持久化。defaultEnabled: true 仅初始化尚无选择的新根 Session，不覆盖恢复 Session 已保存的选择；关闭模式不删除任务或 subagents。
+- **通信和等待**：Team task mutation 不会唤醒 Agent、写入 inbox 或结束 wait_agent；需显式 send_message。成功发送只表示 inbox 接受，不是回复。参数以目标版本当前 subagent-control README / tool catalog 为准。
+- **Web projection**：agentTeam projection 发布持久 Team 视图；Web UI 叠加 Session 状态。拒绝的持久记录通过 failure 呈现，保留最后有效状态。不要将旧版 roster/mailbox 视图视为当前成员权限事实。
+- **Git Worktree / GitHub review**：0.2.2-rc.2 release notes 确认新增按 branch/commit/file type 审阅、GitHub review、同步已审阅进度和更新分支；该条仅记录 release notes 可确认的能力，不推断命令、权限或隔离语义。Team 自身仍共享 checkout，不因 Worktree 功能而获得自动隔离。
+- Node.js：本次 master CLI manifest 仍要求 >=24.9.0；此要求仅代表该源码快照。
+- 文件修改、工具执行器、条件工具、Plugin Manager 与 subpath metadata 的 0.2.2-rc.1 既有结论继续适用；本次没有证据表明应扩大或改写其版本边界。
