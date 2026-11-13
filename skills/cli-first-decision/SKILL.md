@@ -47,6 +47,7 @@ metadata:
 | HTTP/API 调试 | git-curl |
 | 文件查找/全文搜索/模糊过滤 | fd-find、rg-search、fzf-filter |
 | Windows CMD/PowerShell 脚本 | cmd-powershell-pitfalls |
+| DSH Agent Team 模式、preset 或 subagent 工具组合配置 | customize-dsh |
 
 例外：一句话可直接回答、纯读取状态、已知路径的简单读取、单文件小改，不必为了形式加载本技能或额外技能。
 
@@ -321,58 +322,37 @@ GitHub / Context7 connector 与 gh / ctx7 CLI 都是可选通道，不是所有�
 - 中间结果留在程序内，筛选/流式处理后只返回决策必需字段；图像与 additionalContexts 等可能独立转发的 payload 也计入上下文预算。
 - 仅在当前会话确实启用 PTC、注入 `run_code` 与 `tools:sdk`，且多步编排/批量处理能减少往返或上下文时采用；单步任务直接调用原生工具。runtime 语言、SDK、调度、取消和部分失败语义见 [PTC-EXECUTION.md](references/PTC-EXECUTION.md)，版本依据见 [AUTHORITATIVE-SOURCES.md](references/AUTHORITATIVE-SOURCES.md)。
 
-## 11. 计划与子智能体
+## 11. 计划、子智能体与 Agent Team 协作
 
-### 何时写计划
+### 何时写计划与委派
 
-多阶段、多模块、依赖关系复杂、风险较高、需要长时间执行或跨会话续跑时，先写可验证计划。简单任务直接执行，不为形式写计划。
+多阶段、多模块、依赖复杂、高风险、长时间或跨会话任务先写可验证计划；简单任务直接执行。只有任务可拆成独立交付、上下文可交接、Read/Write 范围可分离，且节省的关键路径时间大于启动与协调成本时才委派。优先并行只读调研、正交审查和文件边界明确的实现；不要为单文件小改或紧耦合步骤组队。
 
-计划至少包含：
+### 何时启用 DSH Agent Team
 
-- 目标和不做什么。
-- 相关文件/模块。
-- 依赖顺序。
-- 每步执行工具。
-- 写入边界。
-- 验收命令和成功条件。
-- 失败时的回滚/降级路径。
+- **能力边界**：Agent Team 是叠加在标准 subagent 树上的持久化共享任务板，不是另一套 teammate 运行时。标准 subagent 负责创建、发现、消息、中断和生命周期；Team 负责共享任务、依赖与归属状态。
+- **启用门槛**：先确认根 Session 已在模型/推理等级菜单开启「使用智能体团队」，且当前步骤实际注册了 `team_task_create/list/get/update`、`subagent` / `subagent_fork` 和所需 subagent control 工具。标准 base 组合中新 Session 默认关闭 Team；部署 preset 可设初始默认值，但已有根 Session 保存的选择优先。不能仅凭技能被加载就假定 Team 已启用。
+- **不能启用时**：技能不能替用户切换根 Session 模式。Team 工具不可见但标准 subagent 可用时，退化为无共享任务板的普通委派；连 subagent 都不可用时，按依赖顺序串行执行并说明限制。不要臆造工具或调用旧版 `spawn_teammate`、Team 专属消息/成员 API。
+- **配置边界**：仅当用户要求改变 DSH profile/preset、默认 Team 模式或插件组合时，才加载 [customize-dsh](../customize-dsh/SKILL.md)；普通任务协作不改部署配置。
 
-### 何时委派
+### Team 协作流程
 
-只在独立工作能抵消代理启动和协调成本时委派。优先委派只读调研、正交审查和文件边界明确的独立实现；不按“跨两个模块”机械触发。
+1. **由 Lead 规划**：把目标拆成可独立验收的工作包（如官方资料调研、独立模块实现、测试或正交审查），先建立依赖 DAG，明确输入、交付物、验收证据、负责人和 Read/Write 范围；不要只分配模糊角色，把紧耦合或必须串行的步骤留在主流程。
+2. **登记任务**：每个可分派工作项用 `team_task_create` 写入明确的 subject/description（含上下文和验收条件）；用 `blocked_by` 表示依赖，用 `write_scopes` 标注预期触及的工作区相对路径。依赖必须无环；阻塞任务未完成前不得 claim。任务板只记录/协调工作，不会自动启动 Agent。
+3. **派生成员**：用标准 `subagent` 启动自包含的新上下文任务；仅当工作确实需要已完成对话历史时用 `subagent_fork`（它继承已完成轮次，不包含当前尚未完成的轮次）。使用工具返回的成员名称，并按当前 schema 核对提供方能力；一次性外部后端不能依赖后续消息来补充任务。Team 工具不负责创建成员。派发时明确原子目标、工作目录、上下文、允许/禁止修改范围、输出格式和验收条件。
+4. **认领与更新**：成员先用 `team_task_list/get` 读取最新任务和 revision，再以 `team_task_update` 携带 `expected_revision` 执行 claim、release、complete 等状态变更。过期 revision 报冲突时重新读取并协调，不盲目重试；只有根 Lead 可 reassign。持久化结果不确定时先 get 核对，再决定是否重试。
+5. **主动通信**：任务板状态变化不会唤醒 Agent、投递 inbox 消息或结束 `wait_agent`；需要成员行动时显式 `send_message`。发送成功只代表 inbox 接受，不代表已回复。根 Agent 在线时通常会收到直属子 Agent 完成通知；`list_agents` 用于必要的状态/身份核对，`inactive` 不等于任务已完成。不要用轮询替代通知和明确消息。
+6. **汇总验收**：Lead 回收每个成员的结论、修改文件、diff、测试结果和未解决问题；自行检查真实副作用、接口冲突及验收证据，再整合并给出最终答复。任务板标记 completed 不能替代代码/业务验收。
 
-每个子智能体 prompt 必须自包含：
+### 共享工作区与写入边界
 
-```text
-TASK:
-一个原子目标。
+Team 成员共享同一个 checkout；`write_scopes` 只是重叠提示，不是锁、权限边界或独立 worktree。并行写入前必须让文件集合互斥：优先一名成员负责一个文件/模块，多个成员可并行只读分析；同一文件或共享接口只能由一个写入者负责，其他修改串行合并。由 Lead 负责最终集成和回归验证。
 
-WORKING_DIR:
-绝对工作目录。
+DSH 行为以当前工具 schema 和目标版本官方资料为准：[Agent Team 子系统](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/agent-team.zh.md)、[Team service](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/team/agent-team/README.zh.md)、[Team task tools](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/team/tool-agent-team/README.zh.md)、[subagent runtime](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/subagent/subagent/README.zh.md) 与 [subagent control](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/subagent/tool-subagent-control/README.zh.md)。
 
-EXPECTED OUTCOME:
-具体交付物和验收标准。
+### 子智能体任务契约与失败处理
 
-REQUIRED TOOLS:
-当前环境确实可用的工具。
-
-MUST DO:
-必要检查和分析。
-
-MUST NOT DO:
-禁止操作、禁止修改范围。
-
-CONTEXT:
-文件路径、项目现有模式、已知约束。
-
-ACCEPTANCE:
-明确的测试/检查命令及通过标准。
-
-REPORT:
-修改文件、关键结论、实际验证、未解决问题。
-```
-
-子代理无声失败是可能情况。回收结果后，主代理检查任务状态、文件 diff 和验证证据；不得仅凭子代理的成功声明验收。
+每个子任务 prompt 必须包含：原子 TASK、工作目录、必要 CONTEXT、Read/Write 范围、MUST NOT、交付物、ACCEPTANCE 和 REPORT。新上下文 `subagent` 必须获得自包含信息；`subagent_fork` 也要补足当前轮次尚未进入历史的关键信息。子任务失败、超时或输出不完整时，保留已验证结果，读取任务与 Agent 状态后再决定 release、reassign、重试或主流程接手；不得仅凭成员的“完成”声明验收。
 
 ## 12. 写操作安全与恢复
 
