@@ -211,17 +211,22 @@ metadata: {}                      # 可选：技能元数据
 - 如需新增或复制 preset，优先使用当前 Web UI/Agent Preset 管理能力；若通过运行时 API 或工具操作，先从当前环境的 API/工具 schema 确认可用方法（例如 `agentPresets` service），不要假设旧版 `copy/remove` 或文件系统布局仍可用。
 - preset plugin row 的配置 patch 遵循普通 Cordis patch 语义：按 entry id 定位，整份替换 config 时重述完整 `plugins` 列表；不要直接编辑随包安装目录中的 shipped composition。
 
-## Agent Teams（共享任务板）
+## Agent Teams（共享任务板；0.2.2-rc.2 行为）
 
-Agent Teams 是叠加在 subagent 树上的持久化共享任务板，不是 Agent preset，也不是 worktree/进程隔离机制。当前官方包分工：
+Agent Teams 是叠加在 subagent 树上的持久化共享任务板，不是独立的成员/消息运行时，也不是 worktree/进程隔离机制。0.2.2-rc.2 的核心边界是：**subagent 负责创建、发现、通信和中断；Team 只负责根 Session 的模式选择与共享任务板。**
 
-- `@deepseek-ai/dsh-agent-team` 提供 Team 服务与任务状态持久化；`@deepseek-ai/dsh-tool-agent-team` 提供 `team_task_create/list/get/update` 四个模型工具。
-- 工具包依赖标准 subagent 能力；完整组合还需 `@deepseek-ai/dsh-tool-subagent` 与 `@deepseek-ai/dsh-tool-subagent-control`，用于创建、发现、通信和中断队友。
-- 新 Session 默认关闭 Team 模式；根 Session 可在模型/推理等级菜单中启用「使用智能体团队」。`defaultEnabled: true` 只影响尚无已保存选择的新根 Session；恢复的 Session 保留已保存模式。`maxTasks` 默认 `256`。
-- Team 成员共享同一 checkout；`writeScopes` 仅是重叠路径提示，不是锁或写权限边界。不会自动释放任务 owner，也不会为 teammate 创建独立 worktree。
-- 当前成员通信由标准 subagent 控制工具负责：`send_message` 把消息交给指定成员的 inbox；成功返回 `messageId` 只表示 inbox 接受，不是成员回复。`wait_agent` 等待下一步 inbox 输入；任务板变化既不会唤醒空闲成员，也不会结束等待，需要成员行动时应显式发送消息。
+- **包分工**：@deepseek-ai/dsh-agent-team 提供 Team 服务与任务状态持久化；@deepseek-ai/dsh-tool-agent-team 提供 team_task_create/list/get/update 四个模型工具。完整组合还需标准 subagent 服务、spawn backend、@deepseek-ai/dsh-tool-subagent 与 @deepseek-ai/dsh-tool-subagent-control；不要把 Team 包当成创建/通信/中断工具的提供者。
+- **按 Session 启用**：新 Session（包括普通 fork）默认关闭 Team；根 Session 可在模型与推理等级菜单中切换「使用智能体团队」，选择控制整棵子代理树。关闭 Team 只隐藏后续步骤中的任务工具和 Team 指导，不删除任务或子代理。选择持久化并在重启后保留；没有保存选择的历史任务板仍按历史兼容规则视为开启。
+- **默认值**：defaultEnabled: true 只为尚无已保存选择的新根 Session 初始化开启状态；已有选择优先，恢复 Session 不应用默认值。maxTasks 默认 256。标准 base 组合默认 defaultEnabled: false。
+- **Team 专属成员运行时已移除**：不要再使用 spawn_teammate、Team 专属 send_message/list_agents/interrupt_agent、ctx.agentTeams 的创建/消息/中断/成员关系 API。使用标准 subagent（新上下文）或 subagent_fork（继承已完成历史）创建成员；标准 subagent control 工具负责 list_agents、send_message、interrupt_agent 与 wait_agent。历史 Team roster/mailbox 记录仍可解码，但不再授予成员权限，也不会重新投递旧待处理消息。
+- **配置迁移**：agent-team 不再接受 maxMembers、maxMessageBytes、disposalTimeoutMs；tool-agent-team 不再接受 interrupt、freshProvider、forkProvider。将 interrupt: false 移到 tool-subagent-control；删除其他已移除键及仅为 Team 禁用标准 subagent 工具的 patch。字段仍须按目标版本 config catalog 核实。
+- **共享工作区限制**：Team 成员共享同一 checkout；writeScopes 只是规范化路径前缀提示，用于提示 in-progress 任务的重叠，不是锁、写权限边界或隔离。不会自动释放任务 owner，也不会为 teammate 创建独立 worktree。
+- **通信与等待**：任务 owner 以 Session id 为授权身份，展示层可附带不可变 agent 名称。任务变化不会结束 wait_agent、不会给 inbox 投递消息，也不会启动空闲 Agent。send_message 成功只表示 inbox 接受（返回 message id），不代表收到回复；需要成员继续行动时显式发消息。
+- **Web projection**：agentTeam Session projection 为 Web 发布持久 roster/task 视图；实时运行状态由 Session 状态叠加。projection 持久记录失败时会暴露 failure 并保留最后有效视图。不要把旧版 Web roster/mailbox 投影或历史成员字段当作当前权限来源。
 
-详见 [Agent Teams 子系统](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/agent-team.zh.md) 和两个包的 README；字段以目标版本 config catalog 为准。
+**版本迁移注意**：从 Team 专属 API 迁移时，先读 [Agent Team subagent migration guide](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/agent-team-subagents/guide.zh.md) 和 [Session Team mode guide](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upgrade-guide/v0.2.1-rc.2/session-team-mode/guide.zh.md)。两份指南描述不同迁移切面；工具参数以目标版本当前 tool-subagent-control README / 生成工具目录为准。旧指南中的参数名称与当前 README 若不一致，必须查目标版本 schema，不要猜。
+
+详见 [Agent Teams 子系统](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/agent-team.zh.md)、[Team service README](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/team/agent-team/README.zh.md)、[Team tools README](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/team/tool-agent-team/README.zh.md) 与 [subagent control README](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/subagent/tool-subagent-control/README.zh.md)。
 
 ## 插件（cordis package）与自定义工具
 
