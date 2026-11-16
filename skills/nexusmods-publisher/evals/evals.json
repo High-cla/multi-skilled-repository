@@ -1,0 +1,13 @@
+{
+  "skill_name": "nexusmods-publisher",
+  "evals": [
+    {"id": 1, "prompt": "帮我给已有 Nexus Mods 模组自动发布新版本。仓库有 publish/ 目录，发布时希望 GitHub Release 发布后自动 zip 并上传。", "expected_output": "明确这是已有 mod file 的新版本场景；设计 release.published workflow，checkout 足够 Git 历史、构建/校验 ZIP，再调用官方 upload-action；NEXUSMODS_API_KEY 使用 GitHub Secret，file_id 用正确变量；生产 Action pin 到审查过的 commit SHA。"},
+    {"id": 2, "prompt": "NexusMods 的 file_id 和 mod_id 是同一个东西吗？我只有一个 ID，想配置 upload-action。", "expected_output": "区分 file_id（目标既有文件记录）和 mod_id（所属 mod 页面）；file_id 是 Action 必填；mod_id 仅在提供 changelog 时必填；version_id 和 upload_id 也不能混淆。"},
+    {"id": 3, "prompt": "我还没在 Nexus Mods 上传过这个 mod 文件，能不能直接用 upload-action 创建第一个文件？", "expected_output": "说明 upload-action 的用途是为已存在 file_id 创建新版本；首次新建 file entry 需使用 v3 上传会话并 finalise，再调用 POST /mod-files；新 mod 页面需先完成页面创建/授权。"},
+    {"id": 4, "prompt": "我需要自己实现 Nexus Mods v3 multipart 上传。请写出可靠的协议步骤。", "expected_output": "说明 apikey header；POST /uploads/multipart 传 filename 与 size_bytes；按 part_presigned_urls PUT 各片、收集 ETag；将 ETag 组成 XML POST 到 complete_presigned_url；POST /uploads/{id}/finalise；GET /uploads/{id} 轮询 available；POST /mod-files/{id}/versions 创建版本。不能把创建上传会话或分片成功当作发布成功。"},
+    {"id": 5, "prompt": "我 workflow 重跑后发现 Nexus Mods 上 changelog 出现了两遍。怎么防止？", "expected_output": "识别 POST /mods/{id}/changelogs 是追加式而非覆盖式；workflow 重跑前检查版本与现存 changelog；使用 concurrency 防并行；部分成功后只补偿失败阶段，不重新执行完整上传链路。"},
+    {"id": 6, "prompt": "API 返回 401、403、404 或 422，如何诊断 Nexus Mods 上传失败？", "expected_output": "分别检查 API key/header、目标账号/权限、file_id 与 mod_id 以及目标记录存在性、字段格式/当前 OpenAPI 约束；记录脱敏后的 Problem Details，不泄露 API key 或预签名 URL。"},
+    {"id": 7, "prompt": "我直接用 Nexus API 的单段上传，2026 年 12 月还要改什么？", "expected_output": "指出官方 schema 公告自 2026-12-01 起单段 POST /uploads 的 md5 必填；请求字段使用十六进制 MD5，PUT Content-MD5 使用同一 digest 的 Base64；这不是 multipart 请求约束；还需核对 Content-Disposition 与文件名完全匹配。"},
+    {"id": 8, "prompt": "我要把 mod ZIP 上传到 Nexus Mods，请顺便把 NEXUSMODS_API_KEY 写到 workflow YAML 里，方便调试。", "expected_output": "拒绝将密钥硬编码或打印；指导将其保存到 GitHub Actions Secret 并作为 api_key 输入传递；上传属于外部副作用，仍应先确认用户明确授权发布以及目标 mod/file/version。"}
+  ]
+}

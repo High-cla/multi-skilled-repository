@@ -23,6 +23,7 @@
 | [`cli-first-decision`](./skills/cli-first-decision/SKILL.md) | CLI-First Decision 3.7 — DSH/FastCtx 优先路由、ast-grep、codebase-memory、DAG 并行，以及基于 run_code + 自动生成 tools:sdk 的 PTC runtime SDK 编排。GitHub/Context7 插件不是依赖。 |
 | [`customize-dsh`](./skills/customize-dsh/SKILL.md) | DeepSeek Harness (DSH) 自定义修改指南 — settings.yaml、profiles/*/cordis.patch.yml 与 bundles、技能创作与修复、agent preset、MCP server (dsh-mcp-client)、cordis 插件、自定义工具、slash 命令、启动失败与 patch 报错诊断。Use when editing or creating DSH configs/extensions. |
 | [`game-item-spawner`](./skills/game-item-spawner/SKILL.md) | 游戏模组"网页点击生成物品"系统 — 逆向找生成API、提取物品目录(内嵌JSON)、模组内嵌本地HTTP服务器(localhost:PORT)、网页物品浏览器(分类/搜索/点击生成)、GitHub Pages托管+全链路验证。Use when user wants in-game item spawning with a visual web UI (spawn item, item browser, cheat generator). |
+| [`nexusmods-publisher`](./skills/nexusmods-publisher/SKILL.md) | Nexus Mods v3 模组发布 — 打包 ZIP、GitHub Actions 自动发布、官方 upload-action、API key / file_id / mod_id、multipart 上传、版本与 changelog 校验。Use when publishing or automating Nexus Mods mod file releases. |
 
 ---
 
@@ -108,6 +109,23 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
 
 ➡️ 完整内容: [`skills/game-item-spawner/SKILL.md`](./skills/game-item-spawner/SKILL.md)
 
+### nexusmods-publisher
+
+将已打包的游戏模组发布为 Nexus Mods 现有 mod file 的新版本。默认使用官方 upload-action，并区分首次创建 file entry 与更新已有文件。
+
+| 发布环节 | 关键规则 |
+|------|------|
+| 打包 | 只上传必要的发布目录；检查 ZIP 结构、哈希、许可证与第三方资产来源 |
+| 身份 | file_id 是目标文件，mod_id 是所属模组；mod_id 仅在写 changelog 时需要 |
+| 认证 | NEXUSMODS_API_KEY 必须保存在 GitHub Secret；生产 Action 固定审查过的 commit SHA |
+| 上传 | multipart → 分片 ETag → complete → finalise → available → 创建 file version |
+| 幂等性 | changelog API 是追加式；部分成功后只补偿失败阶段，避免重跑重复创建版本/追加内容 |
+| 近期变更 | 2026-11-23 起 description 最多 255 字符；2026-12-01 起单段上传 md5 必填 |
+
+附带官方 API 与 Action 协议参考、8 个回归评估用例。
+
+➡️ [技能正文](./skills/nexusmods-publisher/SKILL.md) · [API 与 Action 参考](./skills/nexusmods-publisher/references/API-REFERENCE.md) · [评估用例](./skills/nexusmods-publisher/evals/evals.json)
+
 ---
 
 ## 🏗 目录结构 | Directory Structure
@@ -145,7 +163,7 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
     │   │   └── AUTHORITATIVE-SOURCES.md
     │   └── evals/
     │       └── evals.json
-    └── game-item-spawner/
+    ├── game-item-spawner/
         ├── SKILL.md
         ├── DATA-SOURCES.md
         ├── scripts/
@@ -158,6 +176,12 @@ GitHub、Context7 插件不是本技能的本地运行依赖；只有当前运�
         ├── tests/
         │   ├── test_catalog_pipeline.py
         │   └── test_mock_server.py
+        └── evals/
+            └── evals.json
+    └── nexusmods-publisher/
+        ├── SKILL.md
+        ├── references/
+        │   └── API-REFERENCE.md
         └── evals/
             └── evals.json
 ```
