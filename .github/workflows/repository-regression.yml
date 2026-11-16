@@ -69,7 +69,7 @@ jobs:
                 windows_changed=true
                 agent_changed=true
                 ;;
-              skills/cli-first-decision/*|requirements-agent-skill-validation.txt)
+              skills/cli-first-decision/*|skills/nexusmods-publisher/*|requirements-agent-skill-validation.txt)
                 agent_changed=true
                 ;;
               skills/game-item-spawner/scripts/*.py|skills/game-item-spawner/tests/*)
@@ -140,6 +140,34 @@ jobs:
         run: python -m pip install -r requirements-agent-skill-validation.txt
       - name: Validate cli-first-decision skill
         run: skills-ref validate skills/cli-first-decision
+      - name: Validate nexusmods-publisher skill
+        run: skills-ref validate skills/nexusmods-publisher
+      - name: Validate Nexus Mods publishing eval dataset structure
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("skills/nexusmods-publisher/evals/evals.json")
+          data = json.loads(path.read_text(encoding="utf-8"))
+          assert data.get("skill_name") == "nexusmods-publisher", "unexpected skill name"
+
+          skill_text = Path("skills/nexusmods-publisher/SKILL.md").read_text(encoding="utf-8")
+          assert skill_text.startswith("---"), "SKILL.md frontmatter is missing"
+          frontmatter = skill_text.split("---", 2)[1]
+          assert "name: nexusmods-publisher" in frontmatter, "skill name mismatch"
+          assert "description:" in frontmatter, "skill description is missing"
+
+          cases = data.get("evals")
+          assert isinstance(cases, list) and cases, "evals must be a non-empty list"
+          ids = [case.get("id") for case in cases]
+          assert all(isinstance(case_id, int) for case_id in ids), "eval IDs must be integers"
+          assert len(ids) == len(set(ids)), "eval IDs must be unique"
+          for index, case in enumerate(cases):
+              assert isinstance(case.get("prompt"), str) and case["prompt"].strip(), "case prompt missing at %d" % index
+              assert isinstance(case.get("expected_output"), str) and case["expected_output"].strip(), "case expected_output missing at %d" % index
+          print("Validated %d Nexus Mods eval case definitions; structure only." % len(cases))
+          PY
       - name: Validate declarative eval dataset structure
         run: |
           python - <<'PY'
