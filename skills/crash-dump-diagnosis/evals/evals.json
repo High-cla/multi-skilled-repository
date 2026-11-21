@@ -30,6 +30,30 @@
       "prompt": "WinDbg 显示某个 DLL 的 symbols could not be loaded，调用栈只有地址；dump 也读不到某个对象地址，这是不是空指针？",
       "expected_output": "检查 .symfix/.sympath/.exepath/.reload、匹配 PDB GUID/Age 和模块版本；区分 public/private symbols；明确 dump 未保存页面不等于 NULL 或已释放对象",
       "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "UE4SS 注入后游戏启动就闪退，UE4SS.log 最后几行涉及 GUObjectArray / UObject cache，怎么判断是 UE4SS 还是 Mod？",
+      "expected_output": "确认实际加载 UE4SS.dll、游戏 UE 版本、working directory 和完整日志；用原版基线、UE4SS 无第三方 Mod、逐组启用 Mods 的单变量对照；只有启动路径指向 UObject cache 时才单独测试 bUseUObjectArrayCache=false；不能直接把该开关当通用修复",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "UE4SS Lua Mod 在 RegisterHook 回调里偶发 access violation，参数是 RemoteUnrealParam，有时对象是 nil / userdata，pcall 没有捕获",
+      "expected_output": "按 RegisterHook 的 UFunction 加载时机和 Pre/Post 语义分析；对 RemoteUnrealParam 使用 get()，区分 nil / userdata / 无效 UObject，并在反射前 IsValid；检查对象生命周期、参数类型、是否错误转字符串；指出 pcall 不能捕获原生 AV",
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "UE4SS Mod 开启热重载后游戏偶发崩溃，栈里出现 lua_close、hook_lua、ProcessEvent 和后台线程，怎么查？",
+      "expected_output": "把崩溃时序与 OnUnload、async thread join、game-thread action 队列、hook 注销和 lua_close 对齐；检查 UObject 操作是否从 async thread 错误执行，按需使用 ExecuteInGameThread；用精确 UE4SS commit / matching PDB 核对卸载顺序，不能把单个栈符号直接当结论",
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "UE4SS 启动时报 AOB not found / missing GUObjectArray，是否就是游戏不兼容？能不能直接加自定义 AOB？",
+      "expected_output": "区分扫描失败和运行时崩溃；核对 UE 版本、编译配置、DebugBuild、Stats、PointerHash 和实际 DLL；按 UE4SS_Signatures 官方流程验证 AOB 指向准确函数/全局变量，避免错误地址导致二次崩溃",
+      "files": []
     }
   ]
 }
