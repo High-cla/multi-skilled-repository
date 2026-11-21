@@ -139,7 +139,7 @@ ctx = u32(e + 164)                        # CONTEXT 的 file offset：rip@+248 r
 4. 先按每个操作码声明的额外 slot 数把 unwind codes 解析成完整操作，再按 prolog 执行顺序的逆序应用；**额外 operand slot 不是独立 opcode**。常见 op：0=PUSH_NONVOL（从 `[rsp]` 恢复寄存器并 `rsp += 8`）；1=ALLOC_LARGE（`OpInfo=0` 时下一 slot 是 `imm16*8`，`OpInfo=1` 时下两 slot 组成 `imm32`）；2=ALLOC_SMALL（`rsp += info*8+8`）；3=SET_FPREG（`rsp = frame_reg - frame_off*16`）；4/5=SAVE_NONVOL / SAVE_NONVOL_FAR（恢复非易失寄存器，5 使用 32 位偏移）；8/9=SAVE_XMM128 / SAVE_XMM128_FAR（恢复 XMM 寄存器，偏移单位/编码按对应 opcode 解）；10=PUSH_MACHFRAME（`OpInfo` 指示是否含 error code，按机器帧布局恢复 RIP/RSP，不能再按普通函数尾声执行一次 `rip=[rsp]`）。
 5. `UNWIND_INFO` 的 `Flags` 位与 `Version` 要分别解释：`UNW_FLAG_EHANDLER` / `UNW_FLAG_UHANDLER` 表示后面跟异常/终止处理程序信息；`UNW_FLAG_CHAININFO`（flags bit 2）才表示后面跟 chained `RUNTIME_FUNCTION`。CHAININFO 记录位于 `4 + ((count + 1) & ~1) * 2`，即 4 字节头加上按偶数 slot 对齐后的 unwind-code 数组之后；不要把未对齐位置当作链记录。
 6. 以上是常见 x64 操作码的解读框架，不是完整的 Windows unwinder 实现。必须处理 opcode 额外 slot、版本差异、epilog、handler 与 chained unwind info；遇到不支持的编码、异常栈或不完整模块表时，优先以 WinDbg / DbgEng 的结果交叉验证，不能静默跳过后仍声称栈完整。
-6. 最后 `rip = [rsp]; rsp += 8`。
+7. 完成普通函数的 unwind 操作后，才从恢复后的栈顶读取返回地址并调整 RSP；若已通过 `UWOP_PUSH_MACHFRAME` 恢复中断帧，则使用机器帧中的 RIP/RSP，不再重复执行普通返回地址弹栈。
 
 **叶函数捷径**：若当前 PC 所在函数没有 push/sub（如 CRT 的 `strlen`/`memcpy`），它没有栈帧，`[rsp]` 就是返回地址。先看 `[rsp]` 落在哪个模块，往往一步就抓到调用者。
 
@@ -163,7 +163,7 @@ ctx = u32(e + 164)                        # CONTEXT 的 file offset：rip@+248 r
 
 ## 6. 宿主脚本 VM 专章（Lua 为例，其它 VM 同构）
 
-当宿主把脚本运行时**静态链进自己的 DLL**（UE4SS 就是这样，`0xC7xxxx–0xC9xxxx` 是 Lua 核心），崩溃常停在 VM 的 C API 上，此时唯一有用的证据是「脚本的哪一行」。
+当宿主把脚本运行时静态链进自己的 DLL 时（某些 UE4SS 构建即属于此类），崩溃可能停在 VM 的 C API 上，此时应尽可能恢复「脚本的哪一行」。Lua 运行时版本、结构体布局和地址范围必须以实际 UE4SS 二进制 / commit 验证；`0xC7xxxx–0xC9xxxx` 只可视作特定样本的地址线索，不是通用范围。
 
 取 VM 状态的入口：
 
@@ -218,6 +218,122 @@ for pr in protos:
 1. **脚本/mod 侧最小改动**：删掉/改写触发那条表达式（例如用字符串键代替 `FName` userdata 键）；`pcall` 无效时不要假装它有效。
 2. **宿主侧加固**：在边界函数加空判断/类型判断（`get_string` 加 `if (!p) return {};`），需重编译宿主。
 3. **临时隔离**：停用该 mod / 该 hook / 该特性开关，留住可玩状态。
+
+### 7.1 UE4SS 专项工作流（优先于泛化排查）
+
+本节以 UE4SS 官方仓库当前文档、配置模板和 Lua API 为准。**不要把旧版本 UE4SS / Lua 的结构偏移、函数 RVA、AOB、配置项默认值当作跨版本常量。** 任何内存布局分析都必须绑定到实际加载的 `UE4SS.dll`、对应游戏 EXE/DLL、UE 版本和 UE4SS commit。
+
+#### A. 先确认实际加载的 UE4SS 与游戏环境
+
+最少记录以下信息：
+
+- 游戏 EXE 完整路径、游戏版本、Unreal Engine major/minor 版本，以及目标构建配置（Shipping / Test / Development）。
+- 实际加载的 `UE4SS.dll` 路径、文件版本 / SHA-256、UE4SS Release 或 commit；不要只看压缩包名称，因为 proxy DLL、`override.txt`、`--ue4ss-path` 和不同 working directory 可能让游戏加载另一份 DLL。
+- `UE4SS-settings.ini`、所有生效的 `mods.txt`、Mods 目录结构，以及每个 Mod 的版本。留意 `[Overrides]`、`ModsFolderPath`、`ModsFolderPaths`、`ControllingModsTxt` 和 `UE4SS_MODS_PATHS`，否则容易分析错 Mod 清单。
+- 完整 `UE4SS.log`（不要只截最后几行）。官方安装文档建议在 UE4SS 主 DLL 所在目录检查该文件，确认时间戳是本次运行且无初始化错误。
+
+官方支持的 proxy DLL 参数 `--disable-ue4ss` 可用于暂时禁用 UE4SS；仅在 proxy DLL 安装方式下使用。`--ue4ss-path` 可显式指定待测 DLL。做 A/B 时一次只改变一个变量，并保留每轮日志和 dump。
+
+#### B. 最小化隔离：区分 UE4SS 核心、Mod 与游戏本体
+
+按下面顺序做对照，不要一开始就重装或同时改多个开关：
+
+1. **原版基线**：确认不加载 UE4SS / Mods 时能否复现。若原版同样崩溃，不能仅凭 dump 中出现 UE4SS 模块就定责。
+2. **UE4SS 无第三方 Mod**：保持同一 UE4SS DLL 和配置，只禁用第三方 Mods（保留必要的内置组件时需在报告中注明）。崩溃消失后，再按 `mods.txt` 分组或二分启用，锁定最小复现 Mod 集。
+3. **单变量配置实验**：只在启动阶段崩溃、且日志/调用栈指向 UObject 数组初始化或缓存路径时，按官方建议单独尝试 `[General] bUseUObjectArrayCache = false`。若问题消失，记录为缓存路径相关证据；不能把它当成所有 UE4SS 崩溃的通用修复。
+4. 若证据指向对象迭代 / hash table 查询路径，可单独验证 `bForceGUObjectArrayForIteration = true`；这是诊断性对照，不应和其他设置一起盲目切换。
+5. 若崩溃发生在 Mod 热重载或自动重载阶段，检查 `EnableHotReloadSystem`、`EnableAutoReloadingLuaMods` 和触发时间；先关闭重载机制验证是否与卸载生命周期相关。
+
+不要把「关掉 UE4SS 后不崩」直接写成「UE4SS 核心 bug」：它只证明故障依赖 UE4SS 注入路径，仍须继续区分 UE4SS 本体、第三方 Mod、引擎版本兼容和 hook 交互。
+
+#### C. UE4SS 自带 dump 与采集完整度
+
+检查 `UE4SS-settings.ini` 的 `[CrashDump]`：
+
+```ini
+[CrashDump]
+EnableDumping = 1
+FullMemoryDump = 0
+```
+
+- 先确认 `EnableDumping` 是否启用，并保留 UE4SS 自动生成的原始 dump。
+- 若当前 dump 中缺少 Lua Proto、闭包、UObject 或堆对象页，才考虑在可控复现环境中将 `FullMemoryDump` 改为 `1` 进行一次完整采集；这会显著增加文件体积，也可能暴露进程中的敏感数据。采集完成后恢复原设置。
+- 同时保存 `UE4SS.log`、崩溃时间、游戏进程模块列表、`UE4SS-settings.ini`、Mods 清单及相同会话的其他 dump。不要把日志截断、文件修改时间或缺失页作为单独的根因证据。
+
+#### D. Lua Hook / UObject / 参数封送
+
+根据 UE4SS Lua API，`RegisterHook` 的目标 `UFunction` 必须在注册时已存在于内存中；它返回 `PreId` 和 `PostId`，卸载时要正确注销。`/Script/` 路径的回调参数语义与其他路径不同，必须按 API 文档核对 pre/post 时机，不能靠猜。
+
+```lua
+local pre_id, post_id = RegisterHook(
+    "/Script/Engine.PlayerController:ClientRestart",
+    function(Context, NewPawn)
+        local controller = Context:get()
+        local pawn = NewPawn:get()
+
+        if controller and controller:IsValid() then
+            print(controller:GetFullName())
+        end
+        if pawn and pawn:IsValid() then
+            print(pawn:GetFullName())
+        end
+    end
+)
+```
+
+分析规则：
+
+- Hook 参数通常是 `RemoteUnrealParam` 包装对象；需要按 API 用 `:get()` 取出 UObject，再检查 `:IsValid()`。区分 Lua `nil`、无效 UObject、有效 UObject 和非 UObject userdata/table/string，不要把它们隐式混成字符串或对象指针。
+- 对 `UObject` 做反射、读取属性或调用 UFunction 前先验证对象有效性；地图切换、对象销毁、GC、异步回调及缓存对象跨场景复用，都是重点检查的生命周期边界。
+- 记录 hook 的完整 UFunction 路径、Pre/Post ID、触发线程、对象 FullName、参数类型和回调进入/退出日志。日志调用也必须避免对无效对象继续做反射。
+- `RegisterHook` 只支持 `UFunction`，不支持 delegate；目标函数必须已加载。若注册时机早于函数加载，先解决注册时序，不要把 hook 未生效误诊成崩溃根因。
+- `pcall` 只能处理 Lua 可捕获错误，不能保证拦截 UE4SS / Unreal 原生代码中的 access violation、悬空指针或跨线程竞态。
+
+#### E. 异步线程、游戏线程与 Lua VM 卸载
+
+如果栈、日志或复现条件涉及 async callback、mod hot reload、`OnUnload`、`lua_close`、`hook_lua`、`ProcessEvent` 或 `EngineTick`，将线程与生命周期作为一等诊断对象：
+
+- 从异步线程触发、但需要访问 UObject / Unreal 反射 API 的工作，检查是否通过 `ExecuteInGameThread(callback)` 或明确可用的游戏线程执行机制调度；不要仅凭 Lua 层没有报错就认定跨线程访问安全。
+- 检查 `RegisterHook` 是否在 Mod 卸载时正确 `UnregisterHook`，两个 ID 是否匹配，是否存在 hook 仍执行时 Lua VM 已被关闭的路径。
+- 将崩溃时间与 `OnUnload`、热重载、异步线程停止/Join、待执行 game-thread action 清理、hook 注销和 `lua_close` 对齐。若 dump 显示同一 Lua state 被多个线程并发访问，先确认是否有缺失同步或状态销毁竞态。
+- UE4SS 当前源码的 LuaMod 卸载路径包含停止并 Join async thread、同步 game-thread 执行、清理待执行动作、注销 hooks 后再关闭 Lua state 等保护步骤。排查自定义 Mod 时，应将其生命周期与该顺序对照；若崩溃位于 UE4SS 内部，也必须核对 dump 对应的确切源码 commit，不能从其他版本源码推断。
+
+#### F. AOB 缺失 / 引擎版本错配 / 反射布局异常
+
+先区分「UE4SS 初始化失败」与「运行中崩溃」：
+
+- 若日志明确显示 AOB / signature 未找到、GUObjectArray、GMalloc、FName 或相关扫描失败，优先按 UE4SS 官方 *Fixing compatibility problems* 流程验证引擎版本、构建配置和签名；不要把扫描失败直接解释成 Lua Mod 崩溃。
+- `UE4SS_Signatures` 目录可为特定游戏提供自定义 AOB / callback。只有通过反汇编确认匹配的是目标函数、并验证返回地址确实指向函数或全局变量后，才采用自定义签名。错误 AOB 可能把错误地址注入后续反射逻辑，形成二次崩溃。
+- 核对 `[EngineVersionOverride]` 中 `MajorVersion`、`MinorVersion`、`DebugBuild`、`Stats` 和 `PointerHash`。只在自动检测有证据表明错误时做单项覆盖；错误的对象布局、STATS 偏移或 hash 算法可能让 UObject / FField / 属性访问表现为随机损坏。
+- 若崩溃发生在 `GUObjectArray`、对象 hash table、`FName`、`FField`、`UObject::GetClassPrivate`、`IsA`、`ProcessEvent` 或 `StaticConstructObject` 周围，先把引擎版本、游戏构建、UE4SS commit 和实际加载 DLL 对齐，再分析指针。不能把另一款游戏或另一 UE 小版本的固定偏移照搬过来。
+
+#### G. PDB 与源码必须和实际 UE4SS 二进制匹配
+
+UE4SS 官方 README 明确指出 PDB 不会被打包进 minidump，调试时必须使用与崩溃 DLL 完全匹配的 PDB。若是自行构建版本，记录构建时的 Git commit；分析时 checkout 同一个 commit 并重新构建，以生成匹配符号。仅下载同名最新 PDB 不足以证明匹配。
+
+本技能原有的 Lua `CallInfo` / `Proto` 偏移、UE4SS 函数 RVA、`0xC7xxxx–0xC9xxxx` 等地址特征，只能作为对应已验证构建的线索。必须先用模块版本、PDB、反汇编或源码确认该布局；禁止把它们当作所有 UE4SS 版本的通用 ABI。
+
+#### H. UE4SS 结论必须给出归属类别
+
+最终结论至少归入以下之一，并附证据与置信度：
+
+1. **Game / Unreal**：不加载 UE4SS 仍可复现，或实际故障路径在游戏自身代码且 UE4SS 仅为旁观模块。
+2. **UE4SS core / compatibility**：与 UE4SS 注入或内部扫描/反射/缓存有关；已排除第三方 Mod，且符号与版本匹配。
+3. **Lua Mod**：禁用特定 Mod 后稳定消失，重新启用可复现；最好定位到脚本文件、行号、hook 或参数类型。
+4. **C++ Mod**：调用栈落在该 Mod 的原生代码，或二分隔离到单个 C++ Mod；需匹配该 Mod 的 PDB。
+5. **Interaction / lifecycle**：单个组件单独运行正常，但特定 Mod 组合、Hook 顺序、异步线程、地图切换或热重载时崩溃。
+6. **Unknown / insufficient dump**：明确列出缺失的 dump 页、PDB、日志或复现条件；不得把推测伪装成确定根因。
+
+### 7.2 UE4SS 官方参考资料
+
+- UE4SS 官方仓库：[UE4SS-RE/RE-UE4SS](https://github.com/UE4SS-RE/RE-UE4SS)。
+- [Installation Guide](https://docs.ue4ss.com/dev/installation-guide.html)：日志位置、DLL 加载、Mods 清单、配置与启动参数。
+- [UE4SS-settings.ini](https://github.com/UE4SS-RE/RE-UE4SS/blob/main/assets/UE4SS-settings.ini)：对象缓存、执行线程、引擎版本覆盖、Hooks、CrashDump 开关。
+- [RegisterHook API](https://docs.ue4ss.com/dev/lua-api/global-functions/registerhook.html)：Hook 注册时机、参数封送、Pre/Post ID 及注销。
+- [ExecuteInGameThread API](https://docs.ue4ss.com/dev/lua-api/global-functions/executeingamethread.html)：把回调调度到游戏线程。
+- [Fixing Compatibility Problems](https://docs.ue4ss.com/dev/guides/fixing-compatibility-problems.html)：AOB 缺失与自定义签名。
+- [Advanced Compatibility Guide](https://docs.ue4ss.com/dev/guides/fixing-compatibility-problems-advanced.html)：签名定位与反汇编流程。
+- [UE4SS README — Debugging](https://github.com/UE4SS-RE/RE-UE4SS#debugging-under-wine)：使用与崩溃 DLL 完全匹配的 PDB；以仓库当前 README 为准。
 
 ## 8. 报告模板
 
