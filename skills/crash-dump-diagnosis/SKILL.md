@@ -24,6 +24,66 @@ metadata:
 - 没有（本机常态）：python + `pefile` + `capstone` 手解。`python -c "import pefile, capstone"` 失败则 `pip install pefile capstone`。
 - 没有调试器也**不要**立刻去读业务源码：先出事实表，事实表出来后再回源码才有落点。
 
+
+## 0.1 WinDbg 标准取证路径（Windows 首选）
+
+本技能主要覆盖 Windows PE / WER / Minidump，尤其是 x64 用户态进程与 UE4SS。若输入是 Linux ELF core 或 macOS core，不要套用下文的 MINIDUMP stream、PE `.pdata` 或 WinDbg 命令；应切换到对应平台的 GDB / LLDB 工作流。
+
+先识别 dump 类型与目标架构，再选命令集。用户态进程 dump 与内核 bugcheck dump 不是同一种证据模型，不能把 `.ecxr`、`.bugcheck` 等命令混用。
+
+### 用户态 dump
+
+```text
+windbg -z C:\Dumps\app.dmp
+.symfix C:\Symbols
+.sympath+ C:\Build\PrivatePdb
+.exepath+ C:\Build\Images
+.reload /f
+!analyze -v
+.exr -1
+.ecxr
+r
+u @rip-10 @rip+20
+kv
+~* kv
+lm
+lmv m suspect_module
+!address @rip
+```
+
+执行顺序与判读：
+
+1. `!analyze -v` 先提供异常/线程/模块线索，不是最终根因判决；`IMAGE_NAME`、`MODULE_NAME` 或 bucket 可能只是故障现场，不等于责任模块。
+2. `.exr -1` 读取最近异常记录；`.ecxr` 切换到异常发生时保存的寄存器上下文。切换后再执行 `r`、反汇编和 `kv`，避免误用当前调试器线程上下文。
+3. x64 使用 `@rip`；x86 应改用 `@eip`。检查故障指令前后指令、参与寻址的寄存器、异常参数和对应内存区域，建立「模块 + RVA + 指令 + 寄存器」证据链。
+4. `~* kv` 查看其他线程栈，`lm` / `lmv` 核对模块基址、映像版本和符号状态；`!address` 帮助判断地址所在区域。线程栈、异常线程和实际责任线程可能不同。
+5. 若 dump 缺少某页，命令无法读取该地址时只记录为「dump 未包含 / 不可访问」，不能据此认定该指针为 NULL、对象已释放或内存损坏。
+
+### 内核 bugcheck dump
+
+```text
+windbg -z C:\Windows\MEMORY.DMP
+.symfix C:\Symbols
+.reload /f
+.bugcheck
+!analyze -v
+kv
+lm t n
+!thread
+```
+
+内核分析从 `.bugcheck` 与 `!analyze -v` 开始。若输出给出 trap frame，使用 `.trap <TrapFrame地址>`；若给出 context record，使用 `.cxr <ContextRecord地址>`，然后再查看 `r`、`kv`。不要在没有对应记录地址时盲目切换上下文。进一步检查进程/线程、IRQL、驱动和设备对象时，必须依据 dump 类型及可用扩展命令决定；小型内存转储往往不包含所需对象页。
+
+## 0.2 符号、映像与 dump 完整性
+
+- 符号路径建议分开配置：`.symfix C:\Symbols` 使用 Microsoft 公共符号服务器并缓存到本地；`.sympath+ <私有 PDB 目录>` 添加应用自己的 PDB；`.exepath+ <匹配的 EXE/DLL 目录>` 提供映像文件；随后 `.reload /f` 强制重新加载。
+- PDB 必须与生成该 dump 的二进制匹配，不能只凭文件名相同判断。核对 PDB 的签名标识（GUID/Age）、映像版本、时间戳与 checksum；不匹配的符号可能产生错误函数名或行号。
+- Microsoft 公共符号通常足以改善系统模块的函数级栈回溯，但不保证包含局部变量、私有类型布局或源代码行信息。缺少 private symbols 时，明确降低结论粒度，不要用相邻导出符号冒充真实函数边界。
+- 需要排查符号加载失败时，可临时执行 `!sym noisy`，再 `.reload /f <module>`；查看诊断信息后用 `!sym quiet` 关闭详细日志。记录哪些模块成功加载符号、哪些只有 export / deferred symbols。
+- 用户态 minidump 只保存其 stream 描述和被选中的内存页；不同生成选项会改变可读内存范围。内核 Small Memory Dump（固定 64 KB）只包含有限的 bugcheck、上下文、栈和模块信息；Kernel Memory Dump 主要保存内核使用的内存，不包含用户态进程内存；Complete / Active dump 保存范围更广，但文件体积与敏感数据暴露风险也更高。
+- 先用 WinDbg 的 dump 信息和实际可读性确认证据边界，再解释缺失字段。不能把「minidump 中没有该地址」推断为「运行时地址无效」。如果必须还原堆对象、Lua Proto 或完整调用参数，应明确说明需要更完整的 dump 或复现采集。
+- 最低采集清单：原始 dump（不要只给截图）、崩溃时间与时区、OS build、进程/模块版本、匹配的 EXE/DLL/PDB、崩溃前日志，以及同一会话的其他 dump。分享前提醒用户检查 dump 中可能包含的路径、用户名、令牌和业务数据。
+
 ## 1. 提取基线事实（一次解析拿全）
 
 minidump 的 stream 目录就是全部事实来源：4=ModuleList、5=MemoryList、6=Exception、9=Memory64List、24=ThreadNames。
@@ -76,8 +136,9 @@ ctx = u32(e + 164)                        # CONTEXT 的 file offset：rip@+248 r
 1. `rva = pc - base`，二分找到 `(Begin, End, UnwindData)` 且 `rva < End` 的那条。
 2. 读 UNWIND_INFO：`ver_flags@0`、`size_of_prolog@1`、`count@2`、`frame_reg@3&0xF`、`frame_off@(byte3>>4)*16`；unwind codes 从 `+4` 起，每条 2 字节 `(code_offset, op|info<<4)`。
 3. `pl = rva - Begin`（当前指令相对函数头的偏移）。**倒序遍历** codes，跳过 `code_offset > pl` 的（尚未执行）。
-4. op：0=PUSH_NONVOL（`reg = [rsp]; rsp += 8`）；1=ALLOC_LARGE（`rsp += imm`）；2=ALLOC_SMALL（`rsp += info*8+8`）；3=SET_FPREG（`rsp = framereg - frame_off`）；4/5=SAVE_NONVOL（`reg = [rsp+off]`，**先读再调 rsp**，倒序正好保证这一点）；10=PUSH_MACHFRAME（中断帧，直接取 rip/rsp）。
-5. `ver_flags & 4` = CHAININFO：`+4+count*2+((count+1)//2)*2` 处是嵌套的 RUNTIME_FUNCTION，接着解。
+4. 先按每个操作码声明的额外 slot 数把 unwind codes 解析成完整操作，再按 prolog 执行顺序的逆序应用；**额外 operand slot 不是独立 opcode**。常见 op：0=PUSH_NONVOL（从 `[rsp]` 恢复寄存器并 `rsp += 8`）；1=ALLOC_LARGE（`OpInfo=0` 时下一 slot 是 `imm16*8`，`OpInfo=1` 时下两 slot 组成 `imm32`）；2=ALLOC_SMALL（`rsp += info*8+8`）；3=SET_FPREG（`rsp = frame_reg - frame_off*16`）；4/5=SAVE_NONVOL / SAVE_NONVOL_FAR（恢复非易失寄存器，5 使用 32 位偏移）；8/9=SAVE_XMM128 / SAVE_XMM128_FAR（恢复 XMM 寄存器，偏移单位/编码按对应 opcode 解）；10=PUSH_MACHFRAME（`OpInfo` 指示是否含 error code，按机器帧布局恢复 RIP/RSP，不能再按普通函数尾声执行一次 `rip=[rsp]`）。
+5. `UNWIND_INFO` 的 `Flags` 位与 `Version` 要分别解释：`UNW_FLAG_EHANDLER` / `UNW_FLAG_UHANDLER` 表示后面跟异常/终止处理程序信息；`UNW_FLAG_CHAININFO`（flags bit 2）才表示后面跟 chained `RUNTIME_FUNCTION`。CHAININFO 记录位于 `4 + ((count + 1) & ~1) * 2`，即 4 字节头加上按偶数 slot 对齐后的 unwind-code 数组之后；不要把未对齐位置当作链记录。
+6. 以上是常见 x64 操作码的解读框架，不是完整的 Windows unwinder 实现。必须处理 opcode 额外 slot、版本差异、epilog、handler 与 chained unwind info；遇到不支持的编码、异常栈或不完整模块表时，优先以 WinDbg / DbgEng 的结果交叉验证，不能静默跳过后仍声称栈完整。
 6. 最后 `rip = [rsp]; rsp += 8`。
 
 **叶函数捷径**：若当前 PC 所在函数没有 push/sub（如 CRT 的 `strlen`/`memcpy`），它没有栈帧，`[rsp]` 就是返回地址。先看 `[rsp]` 落在哪个模块，往往一步就抓到调用者。
@@ -202,3 +263,11 @@ rax 来自对象 +0x10 的 ClassPrivate 槽 = 0xfffffffffdfe94af；崩溃地址 
 6. 单个 dump 定「偶发」。必须至少两个 dump 对齐才能谈概率。
 7. 在原生 AV 面前相信 `pcall`/`try/catch`/`SetUnhandledExceptionFilter` 能救。都不能。
 8. 用 `mtime` 判「日志新鲜度」（pnpm/CAS 会保留旧 mtime）；要看日志内容时间戳。
+
+## 11. 官方参考资料（WinDbg / Context7）
+
+- Microsoft Learn — [Analyzing a User-Mode Dump File](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/analyzing-a-user-mode-dump-file)：打开用户态 dump、命令行选项与 minidump 证据限制。
+- Microsoft Learn — [Getting Started with WinDbg](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/getting-started-with-windbg)：符号路径、`.symfix`、`.sympath`、`.reload` 与基本栈回溯。
+- Microsoft Learn — [Varieties of Kernel-Mode Dump Files](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/varieties-of-kernel-mode-dump-files)：Small、Kernel、Complete、Automatic 与 Active dump 的覆盖范围。
+- Microsoft Learn — [Kernel Memory Dump](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/kernel-memory-dump) 与 [Small Memory Dump](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/small-memory-dump)：内核 dump 的包含/排除范围及 64 KB 小型转储限制。
+- Context7 检索使用的文档库：`/websites/learn_microsoft_en-us_windows-hardware_drivers_debugger`（WinDbg 官方文档镜像；以 Microsoft Learn 原文为准）。
