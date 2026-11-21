@@ -18,6 +18,18 @@
       "prompt": "我们手上有 3 个 dump，时间间隔几十分钟，看起来都崩在同一个地方，帮我判断是不是同一个 bug",
       "expected_output": "按 (异常码, PC, RSP, RBP, 栈前 0x400) 对齐判同源，并据「每会话只执行一次」的代码形态解释复现规律",
       "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Windows 蓝屏后拿到了 C:\\Windows\\MEMORY.DMP，报 DRIVER_IRQL_NOT_LESS_OR_EQUAL，帮我分析是哪一个驱动导致的",
+      "expected_output": "先识别内核 dump 并运行 .bugcheck、!analyze -v、kv；必要时基于输出切换 trap/context frame；说明 Small/Kernel/Complete dump 的证据差异，不能将 !analyze 的模块名直接当作定责结论",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "WinDbg 显示某个 DLL 的 symbols could not be loaded，调用栈只有地址；dump 也读不到某个对象地址，这是不是空指针？",
+      "expected_output": "检查 .symfix/.sympath/.exepath/.reload、匹配 PDB GUID/Age 和模块版本；区分 public/private symbols；明确 dump 未保存页面不等于 NULL 或已释放对象",
+      "files": []
     }
   ]
 }
