@@ -1,0 +1,23 @@
+{
+  "skill_name": "crash-dump-diagnosis",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "游戏一进战斗就闪退，ue4ss 目录里有一堆 crash_2026_11_21_*.dmp，帮我看看到底什么原因",
+      "expected_output": "给出异常码与读/写语义、PC 的模块与 RVA、出错指令与关键寄存器、至少 3 帧调用链，并指出触发的脚本/mod 位置以及是必崩还是偶发",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "C:/Users/me/AppData/Local/CrashDumps/app.exe.1234.dmp 这个分析一下，程序开着开着就没了，什么提示都没有",
+      "expected_output": "先出转储事实表（模块表/异常/线程），再落位到函数，栈回溯不假设 rbp；无调试器时用 python 手册解并说明依赖",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "我们手上有 3 个 dump，时间间隔几十分钟，看起来都崩在同一个地方，帮我判断是不是同一个 bug",
+      "expected_output": "按 (异常码, PC, RSP, RBP, 栈前 0x400) 对齐判同源，并据「每会话只执行一次」的代码形态解释复现规律",
+      "files": []
+    }
+  ]
+}
